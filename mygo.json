@@ -1,0 +1,10 @@
+{
+  "name": "SSHClipboard",
+  "identifier": "com.example.sshclipboard",
+  "version": "0.1.0",
+  "out": "build",
+  "i18n": {
+    "dir": "locales",
+    "source": "en"
+  }
+}
