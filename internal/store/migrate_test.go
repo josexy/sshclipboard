@@ -14,9 +14,14 @@ import (
 	"github.com/egoist/mygo/plugins/sqlite"
 )
 
+// requireSQLite is storetest.RequireSQLite, which this package's tests
+// can't import.
 func requireSQLite(t *testing.T) {
 	t.Helper()
 	if err := sqlite.Load(); err != nil {
+		if os.Getenv("CI") != "" {
+			t.Fatalf("the SQLite native library is unavailable: %v", err)
+		}
 		t.Skipf("skipping: the SQLite native library is unavailable: %v", err)
 	}
 }

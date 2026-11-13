@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CGO_ENABLED: "0"
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: gofmt
+        run: |
+          files=$(gofmt -l .)
+          if [ -n "$files" ]; then
+            echo "These files need gofmt:"
+            echo "$files"
+            exit 1
+          fi
+
+      - name: Vet (go vet and MyGo UI lifetimes)
+        run: go tool mygo vet .
+
+      - name: Message catalog
+        run: |
+          go tool mygo i18n check .
+          go tool mygo generate
+          git diff --exit-code -- locales/
+
+  test:
+    name: Test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # The app ships for Windows x64 and Arm; Linux runs the suite
+        # fastest and adds the race detector.
+        os: [ubuntu-latest, windows-latest, windows-11-arm]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      # MyGo's UI tester draws text with Pango and Cairo on Linux.
+      - name: Install text rendering libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libpangocairo-1.0-0 fonts-dejavu-core
+
+      # CI is set, so tests fail rather than skip if the SQLite native
+      # library can't be downloaded.
+      - name: Test
+        run: go test ./...
+
+      - name: Test with the race detector
+        if: runner.os == 'Linux'
+        env:
+          CGO_ENABLED: "1"
+        run: go test -race ./...
+
+  build:
+    name: Build Windows bundles
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        run: go tool mygo build -platform windows/amd64,windows/arm64
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sshclipboard-windows-amd64
+          path: build/windows-amd64/
+          retention-days: 14
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sshclipboard-windows-arm64
+          path: build/windows-arm64/
+          retention-days: 14

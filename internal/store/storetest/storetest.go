@@ -3,6 +3,7 @@ package storetest
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -12,10 +13,14 @@ import (
 )
 
 // RequireSQLite skips the test when SQLite's native library can't be
-// loaded, as offline before go test has downloaded it.
+// loaded, as offline before go test has downloaded it. In CI (CI is set)
+// it fails instead, so a broken download can't pass as skipped tests.
 func RequireSQLite(tb testing.TB) {
 	tb.Helper()
 	if err := sqlite.Load(); err != nil {
+		if os.Getenv("CI") != "" {
+			tb.Fatalf("the SQLite native library of plugins/sqlite is unavailable: %v", err)
+		}
 		tb.Skipf("skipping: the SQLite native library of plugins/sqlite is unavailable (go test downloads it on first use; are you offline?): %v", err)
 	}
 }
