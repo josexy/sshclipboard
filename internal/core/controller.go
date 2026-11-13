@@ -112,6 +112,7 @@ type loopState struct {
 	filter     store.Filter
 	history    []store.HistoryEntry
 	total      int
+	arrival    uint64
 	summary    store.Summary
 	notice     string
 	saved      map[int64]SavedSecrets

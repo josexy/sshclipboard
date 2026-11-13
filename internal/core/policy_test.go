@@ -1,9 +1,9 @@
 package core
 
 import (
-	"strings"
 	"testing"
 
+	"github.com/josexy/sshclipboard/internal/sshconn/sshtest"
 	"github.com/josexy/sshclipboard/internal/store"
 )
 
@@ -68,8 +68,8 @@ func TestNotificationsAndErrorState(t *testing.T) {
 	if failed == nil || failed.Name != "screenshot_20261112-153045.png" || failed.Err == nil || failed.HistoryID != r.ID {
 		t.Fatalf("notices %+v", e.notes.all())
 	}
-	if !strings.Contains(failed.Err.Error(), "connection refused") {
-		t.Errorf("error %v", failed.Err)
+	if !sshtest.IsConnectionRefused(failed.Err) {
+		t.Errorf("expected connection refused, got %v", failed.Err)
 	}
 	s := e.waitFor("error tray", func(s *State) bool { return s.Tray == TrayError })
 	if !s.ErrorBadge {

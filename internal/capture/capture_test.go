@@ -10,6 +10,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -324,8 +325,17 @@ func TestImageStaged(t *testing.T) {
 	if b, err := os.ReadFile(e.LocalPath); err != nil || !bytes.Equal(b, data) {
 		t.Errorf("staged file: %v", err)
 	}
-	if fi, _ := os.Stat(e.LocalPath); fi.Mode().Perm() != 0o600 {
-		t.Errorf("staged file mode %v", fi.Mode())
+	fi, err := os.Stat(e.LocalPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantMode := os.FileMode(0o600)
+	if runtime.GOOS == "windows" {
+		// On Windows Stat reports writable regular files as 0666.
+		wantMode = 0o666
+	}
+	if got := fi.Mode().Perm(); got != wantMode {
+		t.Errorf("staged file mode %04o, want %04o", got, wantMode)
 	}
 	f, err := os.Open(e.ThumbPath)
 	if err != nil {

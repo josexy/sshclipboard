@@ -55,6 +55,7 @@ type Server struct {
 	dropAfter  int64 // > 0: drop every connection once this many bytes were written
 	denyCreate bool
 	stall      bool // hold global requests (keepalives) without replying
+	chmods     []ChmodRequest
 
 	written  atomic.Int64
 	accepted atomic.Int64
@@ -172,6 +173,19 @@ func (s *Server) Accepted() int { return int(s.accepted.Load()) }
 
 // Written returns how many bytes of file data were written.
 func (s *Server) Written() int64 { return s.written.Load() }
+
+// ChmodRequest records the path and permission bits sent in an SFTP Setstat.
+type ChmodRequest struct {
+	Path string
+	Mode uint32
+}
+
+// ChmodRequests returns the successful permission changes received over SFTP.
+func (s *Server) ChmodRequests() []ChmodRequest {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]ChmodRequest(nil), s.chmods...)
+}
 
 // Close stops the server.
 func (s *Server) Close() {
@@ -389,6 +403,9 @@ func (f fs) Filecmd(r *sftp.Request) error {
 			if err := os.Chmod(local, os.FileMode(attrs.Mode).Perm()); err != nil {
 				return err
 			}
+			f.s.mu.Lock()
+			f.s.chmods = append(f.s.chmods, ChmodRequest{Path: r.Filepath, Mode: attrs.Mode})
+			f.s.mu.Unlock()
 		}
 		if flags.Size {
 			if err := os.Truncate(local, int64(attrs.Size)); err != nil {

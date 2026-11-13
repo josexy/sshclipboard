@@ -77,6 +77,15 @@
   "kindFiles": "Files",
   "kindText": "Text",
   "hideSkipped": "Hide skipped",
+  "activityPreviousPage": "Previous page",
+  "activityNextPage": "Next page",
+  "activityPageNumber": "Page {page} of {pages}",
+  "@activityPageNumber": {
+    "placeholders": {
+      "page": {"type": "int"},
+      "pages": {"type": "int"}
+    }
+  },
   "colPreview": "Preview",
   "colName": "Name",
   "colStatus": "Status",
@@ -110,7 +119,6 @@
   "actionCancel": "Cancel upload",
   "actionDelete": "Delete",
   "actionClearHistory": "Clear history…",
-  "actionsFor": "Actions for {name}",
   "clearTitle": "Clear history?",
   "clearMessage": "All finished entries and their staged files are removed. Files on servers are not deleted.",
   "clearConfirm": "Clear",

@@ -204,7 +204,7 @@ func (c *Controller) onItem(it capture.Item) {
 		c.enqueue(row, *prof)
 	}
 	c.prune()
-	c.refreshHistory()
+	c.refreshHistoryAfterCapture(it.CaptureID)
 }
 
 // enqueue queues an upload of a history row to profile p.

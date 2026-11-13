@@ -34,8 +34,7 @@ func (s stager) path(id string, at time.Time, suffix string) (string, error) {
 	return filepath.Join(dir, id+suffix), nil
 }
 
-// write writes data to path, only readable by the user, and returns its
-// SHA-256, computed while writing.
+// write creates a staged file and computes its SHA-256 while writing.
 func write(path string, data []byte) (string, error) {
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {

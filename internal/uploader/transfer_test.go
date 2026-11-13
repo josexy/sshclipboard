@@ -5,6 +5,8 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"path"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -110,12 +112,23 @@ func TestFileMode(t *testing.T) {
 	j := e.job(1, localFile(t, "a.txt", []byte("a")), "~", "a.txt")
 	j.FileMode = 0o640
 	e.u.Enqueue(j)
-	if ev := e.rec.final(t, 1); ev.Kind != Done {
+	const remote = "/home/alice/a.txt"
+	if ev := e.rec.final(t, 1); ev.Kind != Done || ev.RemotePath != remote {
 		t.Fatalf("%+v", ev)
 	}
-	fi, err := os.Stat(e.s.Local("/home/alice/a.txt"))
-	if err != nil || fi.Mode().Perm() != 0o640 {
-		t.Errorf("mode %v %v", fi.Mode(), err)
+	// The SFTP request carries the exact POSIX mode even when the test
+	// server runs on Windows, where the backing filesystem reports 0666.
+	changes := e.s.ChmodRequests()
+	if len(changes) != 1 || changes[0].Mode != 0o640 || path.Dir(changes[0].Path) != path.Dir(remote) ||
+		!strings.HasSuffix(changes[0].Path, ".part") {
+		t.Errorf("chmod requests %+v, want mode 0640 on the temporary upload", changes)
+	}
+	fi, err := os.Stat(e.s.Local(remote))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := fi.Mode().Perm(); runtime.GOOS != "windows" && got != 0o640 {
+		t.Errorf("remote file mode %04o, want 0640", got)
 	}
 }
 

@@ -277,7 +277,8 @@ func (c *Controller) ProvideSecret(profileID int64, kind secret.Kind, value stri
 	c.do(func() error {
 		c.sec.SetSession(profileID, kind, value)
 		c.l.secretAsk = nil
-		failed, _, err := c.st.History.Query(ctx, store.Filter{Statuses: []store.Status{store.StatusFailed}, Limit: HistoryPageSize})
+		const failedEntryLimit = 500
+		failed, _, err := c.st.History.Query(ctx, store.Filter{Statuses: []store.Status{store.StatusFailed}, Limit: failedEntryLimit})
 		if err != nil {
 			return err
 		}
@@ -349,14 +350,14 @@ func (c *Controller) SaveNaming(n store.Naming, done func(error)) {
 // --- History ---
 
 // SetHistoryFilter changes what the Activity view lists.
-func (c *Controller) SetHistoryFilter(f store.Filter) {
-	c.post(func() {
-		if f.Limit == 0 {
+func (c *Controller) SetHistoryFilter(f store.Filter, done func(error)) {
+	c.do(func() error {
+		if f.Limit <= 0 {
 			f.Limit = HistoryPageSize
 		}
-		c.l.filter = f
-		c.refreshHistory()
-	})
+		f.Offset = max(f.Offset, 0)
+		return c.loadHistory(f)
+	}, done)
 }
 
 // ActivityViewed clears the tray's error state, as opening Activity does.

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -8,6 +9,97 @@ import (
 
 	"github.com/josexy/sshclipboard/internal/store"
 )
+
+func TestHistoryPagination(t *testing.T) {
+	e := newEnv(t, envOpts{})
+	entries := make([]store.HistoryEntry, 501)
+	for i := range entries {
+		entries[i] = store.HistoryEntry{
+			CaptureID: fmt.Sprint(i), CapturedAt: e.now, Kind: store.KindText, Trigger: store.TriggerAuto,
+			OriginalName: fmt.Sprintf("capture-%03d.txt", i), Status: store.StatusSkipped, Action: store.ActionSkip,
+		}
+	}
+	ids, err := e.st.History.Insert(ctx, entries, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	query := func(f store.Filter) {
+		t.Helper()
+		if err := call(t, func(done func(error)) { e.c.SetHistoryFilter(f, done) }); err != nil {
+			t.Fatal(err)
+		}
+	}
+	check := func(offset, total, length int, firstID int64) {
+		t.Helper()
+		s := e.c.State()
+		if s.Filter.Limit != HistoryPageSize || s.Filter.Offset != offset || s.HistoryTotal != total || len(s.History) != length {
+			t.Fatalf("filter %+v, %d rows of %d; want offset %d, %d rows of %d", s.Filter, len(s.History), s.HistoryTotal, offset, length, total)
+		}
+		if length > 0 && s.History[0].ID != firstID {
+			t.Fatalf("first history ID = %d, want %d", s.History[0].ID, firstID)
+		}
+	}
+	query(store.Filter{})
+	check(0, 501, 25, ids[500])
+	query(store.Filter{Offset: 500})
+	check(500, 501, 1, ids[0])
+
+	if err := call(t, func(done func(error)) { e.c.SetSetting(store.KeyRetentionCount, 26, done) }); err != nil {
+		t.Fatal(err)
+	}
+	check(25, 26, 1, ids[475])
+	query(store.Filter{Search: "capture-50"})
+	check(0, 1, 1, ids[500])
+	query(store.Filter{Offset: 25})
+	check(25, 26, 1, ids[475])
+	if err := call(t, func(done func(error)) { e.c.DeleteEntry(ids[475], done) }); err != nil {
+		t.Fatal(err)
+	}
+	check(0, 25, 25, ids[500])
+	if err := call(t, e.c.ClearHistory); err != nil {
+		t.Fatal(err)
+	}
+	check(0, 0, 0, 0)
+}
+
+func TestNewClipboardCaptureReturnsHistoryToFirstPage(t *testing.T) {
+	e := newEnv(t, envOpts{})
+	entries := make([]store.HistoryEntry, HistoryPageSize+1)
+	for i := range entries {
+		entries[i] = store.HistoryEntry{
+			CaptureID: fmt.Sprint(i), CapturedAt: e.now.Add(-time.Minute), Trigger: store.TriggerAuto,
+			Kind: store.KindImage, OriginalName: "image.png", Status: store.StatusSkipped, Action: store.ActionSkip,
+		}
+	}
+	if _, err := e.st.History.Insert(ctx, entries, nil); err != nil {
+		t.Fatal(err)
+	}
+	setPage := func(f store.Filter) {
+		t.Helper()
+		f.Offset = HistoryPageSize
+		if err := call(t, func(done func(error)) { e.c.SetHistoryFilter(f, done) }); err != nil {
+			t.Fatal(err)
+		}
+	}
+	setPage(store.Filter{Kinds: []store.Kind{store.KindImage}})
+	e.cb.copy(text("a capture hidden by the filter"))
+	e.waitFor("hidden capture saved", func(*State) bool { return len(e.entries()) == len(entries)+1 })
+	// Wait for a command on the loop after the capture's history refresh.
+	if err := call(t, func(done func(error)) { e.c.do(func() error { return nil }, done) }); err != nil {
+		t.Fatal(err)
+	}
+	if s := e.c.State(); s.Filter.Offset != HistoryPageSize || s.HistoryArrival != 0 {
+		t.Fatalf("hidden capture moved history to offset %d, arrival %d", s.Filter.Offset, s.HistoryArrival)
+	}
+
+	setPage(store.Filter{Statuses: []store.Status{store.StatusSkipped}})
+	e.cb.copy(text("a capture visible in the filter"))
+	s := e.waitFor("visible capture refreshed history", func(s *State) bool { return s.HistoryTotal == len(entries)+2 })
+	if s.Filter.Offset != 0 || s.HistoryArrival != 1 || s.History[0].Kind != store.KindText ||
+		len(s.Filter.Statuses) != 1 || s.Filter.Statuses[0] != store.StatusSkipped {
+		t.Fatalf("offset %d, arrival %d, filter %+v, first row %+v", s.Filter.Offset, s.HistoryArrival, s.Filter, s.History[0])
+	}
+}
 
 // Spec "Retry failed entry": queued again to its original profile with
 // its stored name, then uploaded.

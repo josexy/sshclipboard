@@ -499,6 +499,38 @@ func (msgs Messages) HideSkipped() string {
 	return Catalog.Format(msgs.locale, "hideSkipped", nil)
 }
 
+// ActivityPreviousPage says "Previous page"
+// in the language the app shows.
+func ActivityPreviousPage() string { return In(i18n.Locale()).ActivityPreviousPage() }
+
+// ActivityPreviousPage says "Previous page"
+// in the language of msgs.
+func (msgs Messages) ActivityPreviousPage() string {
+	return Catalog.Format(msgs.locale, "activityPreviousPage", nil)
+}
+
+// ActivityNextPage says "Next page"
+// in the language the app shows.
+func ActivityNextPage() string { return In(i18n.Locale()).ActivityNextPage() }
+
+// ActivityNextPage says "Next page"
+// in the language of msgs.
+func (msgs Messages) ActivityNextPage() string {
+	return Catalog.Format(msgs.locale, "activityNextPage", nil)
+}
+
+// ActivityPageNumber says "Page {page} of {pages}"
+// in the language the app shows.
+func ActivityPageNumber(page int, pages int) string {
+	return In(i18n.Locale()).ActivityPageNumber(page, pages)
+}
+
+// ActivityPageNumber says "Page {page} of {pages}"
+// in the language of msgs.
+func (msgs Messages) ActivityPageNumber(page int, pages int) string {
+	return Catalog.Format(msgs.locale, "activityPageNumber", map[string]any{"page": page, "pages": pages})
+}
+
 // ColPreview says "Preview"
 // in the language the app shows.
 func ColPreview() string { return In(i18n.Locale()).ColPreview() }
@@ -707,16 +739,6 @@ func ActionClearHistory() string { return In(i18n.Locale()).ActionClearHistory()
 // in the language of msgs.
 func (msgs Messages) ActionClearHistory() string {
 	return Catalog.Format(msgs.locale, "actionClearHistory", nil)
-}
-
-// ActionsFor says "Actions for {name}"
-// in the language the app shows.
-func ActionsFor(name string) string { return In(i18n.Locale()).ActionsFor(name) }
-
-// ActionsFor says "Actions for {name}"
-// in the language of msgs.
-func (msgs Messages) ActionsFor(name string) string {
-	return Catalog.Format(msgs.locale, "actionsFor", map[string]any{"name": name})
 }
 
 // ClearTitle says "Clear history?"

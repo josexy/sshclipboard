@@ -1,6 +1,7 @@
 package view
 
 import (
+	"slices"
 	"time"
 
 	"github.com/egoist/mygo/ui"
@@ -17,7 +18,11 @@ type activityVM struct {
 	hideSkipped bool
 	list        ui.ListState
 	selected    int
-	sent        *store.Filter
+	sent        store.Filter // last criteria sent from the controls
+	shown       store.Filter // criteria and offset of the last rendered page
+	arrival     uint64
+	requestID   uint64
+	pending     bool
 	clearOpen   bool
 }
 
@@ -45,33 +50,51 @@ func (vm *activityVM) filter() store.Filter {
 	return f
 }
 
-func sameFilter(a, b store.Filter) bool {
-	if a.Search != b.Search || a.HideSkipped != b.HideSkipped || len(a.Statuses) != len(b.Statuses) || len(a.Kinds) != len(b.Kinds) {
-		return false
-	}
-	for i := range a.Statuses {
-		if a.Statuses[i] != b.Statuses[i] {
-			return false
-		}
-	}
-	for i := range a.Kinds {
-		if a.Kinds[i] != b.Kinds[i] {
-			return false
-		}
-	}
-	return true
+func sameHistoryCriteria(a, b store.Filter) bool {
+	return a.Search == b.Search && a.HideSkipped == b.HideSkipped &&
+		slices.Equal(a.Statuses, b.Statuses) && slices.Equal(a.Kinds, b.Kinds)
 }
 
-// entryActions are what can be done with an entry, as its menu and the
-// action bar offer them.
-type entryAction struct {
-	label string
-	run   func()
+func (a *App) requestHistory(f store.Filter) {
+	vm := &a.activity
+	vm.requestID++
+	id := vm.requestID
+	vm.pending = true
+	a.ctrl.SetHistoryFilter(f, func(error) {
+		if vm.requestID == id {
+			vm.pending = false
+		}
+	})
 }
 
-func (a *App) entryActions(e store.HistoryEntry) []entryAction {
-	var out []entryAction
-	add := func(label string, run func()) { out = append(out, entryAction{label, run}) }
+func (a *App) activityPagination(c *ui.Context, t *ui.Theme, s *core.State) {
+	vm := &a.activity
+	page := s.Filter.Offset/core.HistoryPageSize + 1
+	pages := (s.HistoryTotal-1)/core.HistoryPageSize + 1
+	changePage := func(delta int) {
+		if vm.pending {
+			return
+		}
+		f := s.Filter
+		f.Limit = core.HistoryPageSize
+		f.Offset = (page - 1 + delta) * core.HistoryPageSize
+		a.requestHistory(f)
+	}
+	ui.Row(c).Key("pagination").AlignItems(ui.Center).Justify(ui.End).Gap(8).Children(func() {
+		ui.Button(c.Key("previous-page"), locales.ActivityPreviousPage()).
+			Disabled(vm.pending || page <= 1).OnClick(func() { changePage(-1) })
+		ui.Text(c, locales.ActivityPageNumber(page, pages)).TextColor(t.TextMuted).Role(ui.RoleStatus)
+		ui.Button(c.Key("next-page"), locales.ActivityNextPage()).
+			Disabled(vm.pending || page >= pages).OnClick(func() { changePage(1) })
+	})
+}
+
+func (a *App) activityEntryMenu(m *ui.Menu, e store.HistoryEntry) {
+	add := func(label string, run func()) {
+		if m.Item(label).Chosen() {
+			run()
+		}
+	}
 	if e.Status == store.StatusUploaded && e.RemotePath != "" {
 		add(locales.ActionCopyPath(), func() { a.ctrl.CopyRemotePath(e.ID, nil) })
 	}
@@ -91,7 +114,6 @@ func (a *App) entryActions(e store.HistoryEntry) []entryAction {
 		add(locales.ActionShowInFolder(), func() { a.plat.ShowInFolder(e.LocalPath) })
 	}
 	add(locales.ActionDelete(), func() { a.ctrl.DeleteEntry(e.ID, nil) })
-	return out
 }
 
 func (a *App) activityPage(c *ui.Context, t *ui.Theme, s *core.State) {
@@ -124,20 +146,29 @@ func (a *App) activityPage(c *ui.Context, t *ui.Theme, s *core.State) {
 			vm.clearOpen = true
 		}
 	})
-	if f := vm.filter(); vm.sent == nil || !sameFilter(*vm.sent, f) {
-		vm.sent = &f
-		a.ctrl.SetHistoryFilter(f)
+	if f := vm.filter(); !sameHistoryCriteria(vm.sent, f) {
+		vm.sent = f
+		a.requestHistory(f)
 	}
 
 	rows := s.History
+	vm.list.Selected = &vm.selected
+	pageChanged := vm.shown.Offset != s.Filter.Offset || !sameHistoryCriteria(vm.shown, s.Filter)
+	if len(rows) == 0 || pageChanged {
+		vm.list.Choose(-1)
+	}
+	if len(rows) == 0 || pageChanged || vm.arrival != s.HistoryArrival {
+		vm.list.ScrollTo(0, ui.Start)
+	}
+	vm.shown = s.Filter
+	vm.arrival = s.HistoryArrival
 	if len(rows) == 0 {
 		msg := locales.ActivityEmpty()
-		if vm.sent != nil && (vm.search != "" || vm.status != 0 || vm.kind != 0 || vm.hideSkipped) {
+		if !sameHistoryCriteria(s.Filter, store.Filter{}) {
 			msg = locales.ActivityNoMatch()
 		}
 		ui.Text(c, msg).TextColor(t.TextMuted).Padding(24, 0)
 	} else {
-		vm.list.Selected = &vm.selected
 		vm.list.Key = func(i int) any {
 			if i < len(rows) {
 				return rows[i].ID
@@ -145,6 +176,9 @@ func (a *App) activityPage(c *ui.Context, t *ui.Theme, s *core.State) {
 			return i
 		}
 		vm.list.Label = func(i int) string { return rows[i].OriginalName }
+		vm.list.CellMenu = func(m *ui.Menu, row, _ int) {
+			a.activityEntryMenu(m, rows[row])
+		}
 		cols := []ui.TableColumn{
 			{Title: locales.ColPreview(), Width: 84},
 			{Title: locales.ColName()},
@@ -153,7 +187,7 @@ func (a *App) activityPage(c *ui.Context, t *ui.Theme, s *core.State) {
 			{Title: locales.ColSize(), Width: 80, Align: ui.End},
 			{Title: locales.ColTime(), Width: 120},
 		}
-		ui.Table(c, &vm.list, cols, len(rows), func(row, col int) {
+		ui.Table(c.Key("history-table"), &vm.list, cols, len(rows), func(row, col int) {
 			e := rows[row]
 			// Text on the chosen row's accent fill takes the accent's
 			// text color, which the status colors don't contrast with.
@@ -164,30 +198,11 @@ func (a *App) activityPage(c *ui.Context, t *ui.Theme, s *core.State) {
 				}
 				return col
 			}
-			// Every cell opens the entry's menu, so a right-click anywhere
-			// on the row does; the menu is set before the children.
-			cell := ui.Column(c).Gap(2).FillWidth()
-			cell.ContextMenu(func(m *ui.Menu) {
-				for _, act := range a.entryActions(e) {
-					if m.Item(act.label).Chosen() {
-						act.run()
-					}
-				}
+			ui.Column(c).Gap(2).FillWidth().Children(func() {
+				a.activityCell(c, t, s, e, col, fg, now)
 			})
-			cell.Children(func() { a.activityCell(c, t, s, e, col, fg, now) })
-		}).Grow(1).MinHeight(240).Label(locales.ActivityTitle())
-
-		// The chosen entry's actions, for the keyboard and the pointer.
-		if vm.selected >= 0 && vm.selected < len(rows) {
-			e := rows[vm.selected]
-			ui.Row(c).Gap(8).Wrap().Role(ui.RoleToolbar).Label(locales.ActionsFor(e.OriginalName)).Children(func() {
-				for _, act := range a.entryActions(e) {
-					if ui.Button(c, act.label).Clicked() {
-						act.run()
-					}
-				}
-			})
-		}
+		}).Grow(1).KeepScrollbars(true).Label(locales.ActivityTitle()).Busy(vm.pending)
+		a.activityPagination(c, t, s)
 	}
 
 	switch ui.AlertDialog(c, &vm.clearOpen, locales.ClearTitle(), locales.ClearMessage(), locales.Cancel(), locales.ClearConfirm()) {

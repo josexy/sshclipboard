@@ -21,17 +21,18 @@ import (
 
 // fakeCtrl records the commands the views give and answers them at once.
 type fakeCtrl struct {
-	mu      sync.Mutex
-	state   *core.State
-	calls   []string
-	filters []store.Filter
-	saved   []core.ProfileInput
-	rules   []store.Rule
-	namings []store.Naming
-	test    sshconn.CheckResult
-	dry     []core.DryRunResult
-	setErr  map[string]error
-	saveErr error
+	mu               sync.Mutex
+	state            *core.State
+	calls            []string
+	filters          []store.Filter
+	historyRequested func(store.Filter, func(error))
+	saved            []core.ProfileInput
+	rules            []store.Rule
+	namings          []store.Naming
+	test             sshconn.CheckResult
+	dry              []core.DryRunResult
+	setErr           map[string]error
+	saveErr          error
 }
 
 var now = time.Date(2026, 11, 12, 15, 30, 45, 0, time.Local)
@@ -194,10 +195,15 @@ func (f *fakeCtrl) SaveNaming(n store.Naming, done func(error)) {
 	ok(done)
 }
 func (f *fakeCtrl) DryRun(done func([]core.DryRunResult)) { f.record("DryRun()"); done(f.dry) }
-func (f *fakeCtrl) SetHistoryFilter(fl store.Filter) {
+func (f *fakeCtrl) SetHistoryFilter(fl store.Filter, done func(error)) {
 	f.mu.Lock()
 	f.filters = append(f.filters, fl)
 	f.mu.Unlock()
+	if f.historyRequested != nil {
+		f.historyRequested(fl, done)
+		return
+	}
+	ok(done)
 }
 func (f *fakeCtrl) lastFilter() store.Filter {
 	f.mu.Lock()

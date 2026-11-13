@@ -37,7 +37,7 @@ type Controller interface {
 	SetDefaultAction(a store.Action, done func(error))
 	SaveNaming(n store.Naming, done func(error))
 	DryRun(done func([]core.DryRunResult))
-	SetHistoryFilter(f store.Filter)
+	SetHistoryFilter(f store.Filter, done func(error))
 	ActivityViewed()
 	DismissNotice()
 	Retry(id int64, done func(error))
@@ -148,19 +148,24 @@ func (a *App) View(c *ui.Context) {
 		ui.Column(c).Grow(1).Children(func() {
 			a.header(c, t, s)
 			a.banners(c, t, s)
-			ui.Scroll(c).Grow(1).Padding(20, 24).Gap(16).Children(func() {
-				switch a.page {
-				case PageServers:
-					a.serversPage(c, t, s)
-				case PageRules:
-					a.rulesPage(c, t, s)
-				case PageNaming:
-					a.namingPage(c, t, s)
-				case PageSettings:
-					a.settingsPage(c, t, s)
-				default:
+			var page func(*ui.Context, *ui.Theme, *core.State)
+			switch a.page {
+			case PageServers:
+				page = a.serversPage
+			case PageRules:
+				page = a.rulesPage
+			case PageNaming:
+				page = a.namingPage
+			case PageSettings:
+				page = a.settingsPage
+			default:
+				ui.Column(c).Key(PageActivity).Grow(1).Padding(20, 24).Gap(16).Children(func() {
 					a.activityPage(c, t, s)
-				}
+				})
+				return
+			}
+			ui.Scroll(c).Grow(1).Padding(20, 24).Gap(16).Children(func() {
+				page(c, t, s)
 			})
 		})
 	})

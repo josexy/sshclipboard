@@ -87,7 +87,7 @@ func TestConnectionRefusedFailsAfterFourAttempts(t *testing.T) {
 	e.s.Close()
 	e.u.Enqueue(e.job(1, localFile(t, "a.txt", []byte("a")), "~", "a.txt"))
 	ev := e.rec.final(t, 1)
-	if ev.Kind != Failed || ev.Attempt != 4 || !strings.Contains(ev.Err.Error(), "connection refused") {
+	if ev.Kind != Failed || ev.Attempt != 4 || !sshtest.IsConnectionRefused(ev.Err) {
 		t.Errorf("%+v", ev)
 	}
 }
