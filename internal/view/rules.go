@@ -279,12 +279,15 @@ func (a *App) ruleDialog(c *ui.Context, t *ui.Theme) {
 		}
 		Heading(c, title, 18)
 		errOf := func(f string) string { return vm.errs[f] }
+		field := func(label string, control func()) ui.Element {
+			return leftAlignedField(c, 136, label, control)
+		}
 		ui.Scroll(c).MaxHeight(600).Children(func() {
-			ui.Form(c, func() {
-				ui.Field(c, locales.FieldName(), func() { ui.TextInput(c, &vm.r.Name).AutoFocus().Width(300) }).
+			ui.Column(c).Gap(t.Space(3)).Children(func() {
+				field(locales.FieldName(), func() { ui.TextInput(c, &vm.r.Name).AutoFocus().MaxWidth(300) }).
 					Error(errOf(rules.FieldName))
-				ui.Field(c, locales.FieldAction(), func() {
-					ui.Select(c, &vm.action, []string{locales.ActionUpload(), locales.ActionSkip()}).Width(140)
+				field(locales.FieldAction(), func() {
+					ui.Select(c, &vm.action, []string{locales.ActionUpload(), locales.ActionSkip()}).MaxWidth(140)
 				})
 				ui.Fieldset(c, locales.FieldKinds(), func() {
 					ui.Row(c).Gap(12).Children(func() {
@@ -293,29 +296,29 @@ func (a *App) ruleDialog(c *ui.Context, t *ui.Theme) {
 						ui.Checkbox(c, &vm.text, locales.KindText())
 					})
 				})
-				ui.Field(c, locales.FieldExtensions(), func() { ui.TextInput(c, &vm.exts).Width(300) }).
+				field(locales.FieldExtensions(), func() { ui.TextInput(c, &vm.exts).MaxWidth(300) }).
 					Description(locales.ExtensionsHint())
-				ui.Field(c, locales.FieldGlob(), func() { ui.TextInput(c, &vm.r.Conditions.Glob).Width(300) }).
+				field(locales.FieldGlob(), func() { ui.TextInput(c, &vm.r.Conditions.Glob).MaxWidth(300) }).
 					Description(locales.GlobHint()).Error(errOf(rules.FieldGlob))
 				// Each range is one row: minimum to maximum.
-				rng := func(label, minLabel, maxLabel string, lo, hi *string, field string) {
-					ui.Field(c, label, func() {
+				rng := func(label, minLabel, maxLabel string, lo, hi *string, key string) {
+					field(label, func() {
 						ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-							ui.TextInput(c, lo).Width(100).Label(minLabel)
+							ui.TextInput(c, lo).Grow(1).MaxWidth(100).Label(minLabel)
 							ui.Text(c, locales.RangeTo()).TextColor(t.TextMuted)
-							ui.TextInput(c, hi).Width(100).Label(maxLabel)
+							ui.TextInput(c, hi).Grow(1).MaxWidth(100).Label(maxLabel)
 						})
-					}).Error(errOf(field))
+					}).Error(errOf(key))
 				}
 				rng(locales.FieldSize(), locales.FieldMinSize(), locales.FieldMaxSize(), &vm.minSize, &vm.maxSize, rules.FieldSize)
 				rng(locales.FieldWidth(), locales.FieldMinWidth(), locales.FieldMaxWidth(), &vm.minW, &vm.maxW, rules.FieldWidth)
 				rng(locales.FieldHeight(), locales.FieldMinHeight(), locales.FieldMaxHeight(), &vm.minH, &vm.maxH, rules.FieldHeight)
-				ui.Field(c, locales.FieldRegex(), func() { ui.TextInput(c, &vm.r.Conditions.TextRegex).Width(300) }).
+				field(locales.FieldRegex(), func() { ui.TextInput(c, &vm.r.Conditions.TextRegex).MaxWidth(300) }).
 					Description(locales.RegexHint()).Error(errOf(rules.FieldRegex))
 				if actionOf(vm.action) == store.ActionUpload {
-					ui.Field(c, locales.FieldDirOverride(), func() { ui.TextInput(c, &vm.r.DirOverride).Width(300) }).
+					field(locales.FieldDirOverride(), func() { ui.TextInput(c, &vm.r.DirOverride).MaxWidth(300) }).
 						Description(locales.DirOverrideHint()).Error(errOf(rules.FieldDir))
-					ui.Field(c, locales.FieldTemplateOverride(), func() { ui.TextInput(c, &vm.r.TemplateOverride).Width(300) }).
+					field(locales.FieldTemplateOverride(), func() { ui.TextInput(c, &vm.r.TemplateOverride).MaxWidth(300) }).
 						Description(locales.TemplateOverrideHint()).Error(errOf(rules.FieldTemplate))
 				}
 			})

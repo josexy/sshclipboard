@@ -45,16 +45,19 @@ func (a *App) settingsPage(c *ui.Context, t *ui.Theme, s *core.State) {
 	if !vm.retLoaded {
 		vm.retCount, vm.retDays, vm.retLoaded = strconv.Itoa(st.RetentionCount), strconv.Itoa(st.RetentionDays), true
 	}
+	field := func(label string, control func()) ui.Element {
+		return leftAlignedField(c, 192, label, control)
+	}
 
 	Heading(c, locales.SettingsTitle(), 24)
-	ui.Form(c, func() {
+	ui.Column(c).Gap(t.Space(3)).Children(func() {
 		ui.Fieldset(c, locales.GroupGeneral(), func() {
 			sw := func(label, key string, on bool) {
-				ui.Field(c, label, func() {
+				field(label, func() {
 					if ui.Switch(c, &on).Changed() {
 						set(key, on)
 					}
-				}).Error(vm.errs[key])
+				}).AlignItems(ui.Start).Error(vm.errs[key])
 			}
 			sw(locales.StartAtLogin(), store.KeyStartAtLogin, st.StartAtLogin)
 			sw(locales.StartHidden(), store.KeyStartHidden, st.StartHidden)
@@ -66,8 +69,8 @@ func (a *App) settingsPage(c *ui.Context, t *ui.Theme, s *core.State) {
 			if st.CaptureMode == store.CaptureManual {
 				vm.mode = modes[1]
 			}
-			ui.Field(c, locales.CaptureMode(), func() {
-				if ui.Select(c, &vm.mode, modes).Width(260).Changed() {
+			field(locales.CaptureMode(), func() {
+				if ui.Select(c, &vm.mode, modes).MaxWidth(260).Changed() {
 					mode := store.CaptureAuto
 					if vm.mode == modes[1] {
 						mode = store.CaptureManual
@@ -75,12 +78,12 @@ func (a *App) settingsPage(c *ui.Context, t *ui.Theme, s *core.State) {
 					set(store.KeyCaptureMode, mode)
 				}
 			})
-			ui.Field(c, locales.Hotkey(), func() {
+			field(locales.Hotkey(), func() {
 				ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-					if ui.TextInput(c, &vm.hotkey).Placeholder(locales.HotkeyNone()).Width(180).Label(locales.Hotkey()).Changed() {
+					if ui.TextInput(c, &vm.hotkey).Placeholder(locales.HotkeyNone()).Grow(1).MaxWidth(180).Label(locales.Hotkey()).Changed() {
 						vm.hotkeyDirty = true
 					}
-					if ui.Button(c, locales.HotkeySet()).Disabled(!vm.hotkeyDirty).Clicked() {
+					if ui.Button(c, locales.HotkeySet()).Shrink(0).Disabled(!vm.hotkeyDirty).Clicked() {
 						hk := vm.hotkey
 						delete(vm.errs, store.KeyHotkey)
 						a.ctrl.SetSetting(store.KeyHotkey, hk, func(err error) {
@@ -91,18 +94,18 @@ func (a *App) settingsPage(c *ui.Context, t *ui.Theme, s *core.State) {
 							vm.hotkeyDirty = false
 						})
 					}
-					if ui.Button(c, locales.HotkeyDisable()).Disabled(st.Hotkey == "").Clicked() {
+					if ui.Button(c, locales.HotkeyDisable()).Shrink(0).Disabled(st.Hotkey == "").Clicked() {
 						vm.hotkey, vm.hotkeyDirty = "", false
 						set(store.KeyHotkey, "")
 					}
 				})
 			}).Error(vm.errs[store.KeyHotkey])
 			conf := st.ConfidentialProtection
-			ui.Field(c, locales.Confidential(), func() {
+			field(locales.Confidential(), func() {
 				if ui.Switch(c, &conf).Changed() {
 					set(store.KeyConfidentialProtection, conf)
 				}
-			}).Description(locales.ConfidentialHint())
+			}).AlignItems(ui.Start).Description(locales.ConfidentialHint())
 		})
 		ui.Fieldset(c, locales.GroupAppearance(), func() {
 			sources := []store.Appearance{store.AppearanceSystem, store.AppearanceLight, store.AppearanceDark}
@@ -112,7 +115,7 @@ func (a *App) settingsPage(c *ui.Context, t *ui.Theme, s *core.State) {
 					vm.appearance = i
 				}
 			}
-			ui.Field(c, locales.GroupAppearance(), func() {
+			field(locales.GroupAppearance(), func() {
 				if ui.Segmented(c, &vm.appearance, locales.AppearanceSystem(), locales.AppearanceLight(), locales.AppearanceDark()).
 					AlignSelf(ui.Start).Changed() {
 					set(store.KeyAppearance, sources[vm.appearance])
@@ -128,8 +131,8 @@ func (a *App) settingsPage(c *ui.Context, t *ui.Theme, s *core.State) {
 					vm.notify = labels[i]
 				}
 			}
-			ui.Field(c, locales.GroupNotifications(), func() {
-				if ui.Select(c, &vm.notify, labels).Width(200).Changed() {
+			field(locales.GroupNotifications(), func() {
+				if ui.Select(c, &vm.notify, labels).MaxWidth(200).Changed() {
 					for i, l := range labels {
 						if l == vm.notify {
 							set(store.KeyNotifications, policies[i])
@@ -139,28 +142,28 @@ func (a *App) settingsPage(c *ui.Context, t *ui.Theme, s *core.State) {
 			})
 		})
 		ui.Fieldset(c, locales.GroupStorage(), func() {
-			ui.Field(c, locales.StagingFolder(), func() {
+			field(locales.StagingFolder(), func() {
 				ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 					shown := st.StagingDir
 					if shown == "" {
 						shown = locales.StagingDefault(a.plat.DefaultStaging)
 					}
 					ui.Text(c, shown).TruncateMiddle().MaxWidth(320)
-					if ui.Button(c, locales.Choose()).Clicked() && a.plat.PickFolder != nil {
+					if ui.Button(c, locales.Choose()).Shrink(0).Clicked() && a.plat.PickFolder != nil {
 						a.plat.PickFolder(func(p string) {
 							if p != "" {
 								set(store.KeyStagingDir, p)
 							}
 						})
 					}
-					if ui.Button(c, locales.UseDefault()).Disabled(st.StagingDir == "").Clicked() {
+					if ui.Button(c, locales.UseDefault()).Shrink(0).Disabled(st.StagingDir == "").Clicked() {
 						set(store.KeyStagingDir, "")
 					}
 				})
 			}).Error(vm.errs[store.KeyStagingDir])
 			num := func(label, key string, value *string) {
-				ui.Field(c, label, func() {
-					in := ui.TextInput(c, value).Width(100)
+				field(label, func() {
+					in := ui.TextInput(c, value).MaxWidth(100)
 					if in.Submitted() || (in.FocusLeft()) {
 						n, err := strconv.Atoi(*value)
 						if err != nil || n < 1 {
@@ -175,7 +178,7 @@ func (a *App) settingsPage(c *ui.Context, t *ui.Theme, s *core.State) {
 			num(locales.RetentionDays(), store.KeyRetentionDays, &vm.retDays)
 		})
 		ui.Fieldset(c, locales.GroupAbout(), func() {
-			ui.Field(c, locales.AppName(), func() { ui.Text(c, locales.Version(a.plat.Version)) })
+			field(locales.AppName(), func() { ui.Text(c, locales.Version(a.plat.Version)) })
 		})
 	})
 }

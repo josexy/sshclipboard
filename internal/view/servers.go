@@ -266,26 +266,26 @@ func (a *App) serverForm(c *ui.Context, t *ui.Theme, s *core.State) {
 		})
 	}
 
-	ui.Form(c, func() {
-		ui.Field(c, locales.FieldName(), func() { ui.TextInput(c, &vm.p.Name).Width(320) }).Error(errOf(core.FieldName))
-		ui.Field(c, locales.FieldHost(), func() { ui.TextInput(c, &vm.p.Host).Width(320) }).Error(errOf(core.FieldHost))
-		ui.Field(c, locales.FieldPort(), func() { ui.TextInput(c, &vm.port).Width(100) }).Error(errOf(core.FieldPort))
-		ui.Field(c, locales.FieldUsername(), func() { ui.TextInput(c, &vm.p.Username).Width(320) }).Error(errOf(core.FieldUsername))
-		ui.Field(c, locales.FieldAuth(), func() { ui.Select(c, &vm.auth, authLabels()).Width(200) })
+	ui.Column(c).Gap(t.Space(3)).Children(func() {
+		serverField(c, locales.FieldName(), func() { ui.TextInput(c, &vm.p.Name).MaxWidth(320) }).Error(errOf(core.FieldName))
+		serverField(c, locales.FieldHost(), func() { ui.TextInput(c, &vm.p.Host).MaxWidth(320) }).Error(errOf(core.FieldHost))
+		serverField(c, locales.FieldPort(), func() { ui.TextInput(c, &vm.port).MaxWidth(100) }).Error(errOf(core.FieldPort))
+		serverField(c, locales.FieldUsername(), func() { ui.TextInput(c, &vm.p.Username).MaxWidth(320) }).Error(errOf(core.FieldUsername))
+		serverField(c, locales.FieldAuth(), func() { ui.Select(c, &vm.auth, authLabels()).MaxWidth(200) })
 		switch authOf(vm.auth) {
 		case store.AuthPassword:
 			ph := ""
 			if saved.Password {
 				ph = locales.SecretSaved()
 			}
-			ui.Field(c, locales.FieldPassword(), func() {
-				ui.TextInput(c, &vm.password).Password().Placeholder(ph).Width(320)
+			serverField(c, locales.FieldPassword(), func() {
+				ui.TextInput(c, &vm.password).Password().Placeholder(ph).MaxWidth(320)
 			})
 		case store.AuthKey:
-			ui.Field(c, locales.FieldKeyPath(), func() {
+			serverField(c, locales.FieldKeyPath(), func() {
 				ui.Row(c).Gap(8).Children(func() {
-					ui.TextInput(c, &vm.p.KeyPath).Width(320).Label(locales.FieldKeyPath())
-					if ui.Button(c, locales.Browse()).Clicked() && a.plat.PickFile != nil {
+					ui.TextInput(c, &vm.p.KeyPath).Grow(1).MaxWidth(320).Label(locales.FieldKeyPath())
+					if ui.Button(c, locales.Browse()).Shrink(0).Clicked() && a.plat.PickFile != nil {
 						a.plat.PickFile(func(p string) {
 							if p != "" {
 								vm.p.KeyPath = p
@@ -298,26 +298,27 @@ func (a *App) serverForm(c *ui.Context, t *ui.Theme, s *core.State) {
 			if saved.Passphrase {
 				ph = locales.SecretSaved()
 			}
-			ui.Field(c, locales.FieldPassphrase(), func() {
-				ui.TextInput(c, &vm.passphrase).Password().Placeholder(ph).Width(320)
+			serverField(c, locales.FieldPassphrase(), func() {
+				ui.TextInput(c, &vm.passphrase).Password().Placeholder(ph).MaxWidth(320)
 			})
 		case store.AuthAgent:
 			ui.Text(c, locales.AgentHint()).TextColor(t.TextMuted).Wrap().MaxWidth(420)
 		}
 		a.proxyFields(c, saved)
-		ui.Field(c, locales.FieldRemoteDir(), func() { ui.TextInput(c, &vm.p.RemoteDir).Width(320) }).
+		serverField(c, locales.FieldRemoteDir(), func() { ui.TextInput(c, &vm.p.RemoteDir).MaxWidth(320) }).
 			Description(locales.RemoteDirHint()).Error(errOf(core.FieldRemoteDir))
-		ui.Field(c, locales.FieldCreateDirs(), func() { ui.Switch(c, &vm.p.CreateDirs) })
-		ui.Field(c, locales.FieldConflict(), func() { ui.Select(c, &vm.conflict, conflictLabels()).Width(200) })
-		ui.Field(c, locales.FieldFileMode(), func() { ui.TextInput(c, &vm.fileMode).Placeholder("0644").Width(100) }).
+		serverField(c, locales.FieldCreateDirs(), func() { ui.Switch(c, &vm.p.CreateDirs) }).AlignItems(ui.Start)
+		serverField(c, locales.FieldConflict(), func() { ui.Select(c, &vm.conflict, conflictLabels()).MaxWidth(200) })
+		serverField(c, locales.FieldFileMode(), func() { ui.TextInput(c, &vm.fileMode).Placeholder("0644").MaxWidth(100) }).
 			Description(locales.FileModeHint()).Error(errOf(core.FieldFileMode))
-		ui.Field(c, locales.FieldCopyBack(), func() { ui.Switch(c, &vm.p.CopyBack) }).Description(locales.CopyBackHint())
-		ui.Field(c, locales.FieldCopyTemplate(), func() { ui.TextInput(c, &vm.p.CopyTemplate).Width(320) }).
+		serverField(c, locales.FieldCopyBack(), func() { ui.Switch(c, &vm.p.CopyBack) }).
+			AlignItems(ui.Start).Description(locales.CopyBackHint())
+		serverField(c, locales.FieldCopyTemplate(), func() { ui.TextInput(c, &vm.p.CopyTemplate).MaxWidth(320) }).
 			Description(locales.CopyTemplateHint()).Error(errOf(core.FieldTemplate))
-		ui.Field(c, locales.FieldSeparator(), func() {
-			ui.Select(c, &vm.separator, []string{locales.SeparatorSpace(), locales.SeparatorNewline()}).Width(200)
+		serverField(c, locales.FieldSeparator(), func() {
+			ui.Select(c, &vm.separator, []string{locales.SeparatorSpace(), locales.SeparatorNewline()}).MaxWidth(200)
 		})
-		ui.Field(c, locales.FieldShellQuote(), func() { ui.Switch(c, &vm.p.ShellQuote) })
+		serverField(c, locales.FieldShellQuote(), func() { ui.Switch(c, &vm.p.ShellQuote) }).AlignItems(ui.Start)
 	})
 
 	switch ui.AlertDialog(c, &vm.deleteOpen, locales.DeleteServerTitle(vm.p.Name), locales.DeleteServerMessage(),
@@ -332,28 +333,32 @@ func (a *App) serverForm(c *ui.Context, t *ui.Theme, s *core.State) {
 	}
 }
 
+func serverField(c *ui.Context, label string, control func()) ui.Element {
+	return leftAlignedField(c, 160, label, control)
+}
+
 // proxyFields are the form's proxy settings: the type, and for SOCKS5 its
 // address and optional sign-in.
 func (a *App) proxyFields(c *ui.Context, saved core.SavedSecrets) {
 	vm := &a.servers
 	errOf := func(field string) string { return ErrorText(vm.errs[field]) }
-	ui.Field(c, locales.FieldProxy(), func() { ui.Select(c, &vm.proxy, proxyLabels()).Width(200) }).
+	serverField(c, locales.FieldProxy(), func() { ui.Select(c, &vm.proxy, proxyLabels()).MaxWidth(200) }).
 		Description(locales.ProxyHint())
 	if proxyOf(vm.proxy) != store.ProxySOCKS5 {
 		return
 	}
-	ui.Field(c, locales.FieldProxyHost(), func() { ui.TextInput(c, &vm.p.Proxy.Host).Width(320) }).
+	serverField(c, locales.FieldProxyHost(), func() { ui.TextInput(c, &vm.p.Proxy.Host).MaxWidth(320) }).
 		Error(errOf(core.FieldProxyHost))
-	ui.Field(c, locales.FieldProxyPort(), func() { ui.TextInput(c, &vm.proxyPort).Width(100) }).
+	serverField(c, locales.FieldProxyPort(), func() { ui.TextInput(c, &vm.proxyPort).MaxWidth(100) }).
 		Error(errOf(core.FieldProxyPort))
-	ui.Field(c, locales.FieldProxyUsername(), func() { ui.TextInput(c, &vm.p.Proxy.Username).Width(320) }).
+	serverField(c, locales.FieldProxyUsername(), func() { ui.TextInput(c, &vm.p.Proxy.Username).MaxWidth(320) }).
 		Description(locales.ProxyUsernameHint())
 	ph := ""
 	if saved.ProxyPassword {
 		ph = locales.SecretSaved()
 	}
-	ui.Field(c, locales.FieldProxyPassword(), func() {
-		ui.TextInput(c, &vm.proxyPass).Password().Placeholder(ph).Width(320)
+	serverField(c, locales.FieldProxyPassword(), func() {
+		ui.TextInput(c, &vm.proxyPass).Password().Placeholder(ph).MaxWidth(320)
 	})
 }
 
