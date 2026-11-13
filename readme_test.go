@@ -67,6 +67,8 @@ func TestReadme(t *testing.T) {
 		"File names":                    n[1].Template,
 		"Text file names":               n[2].Template,
 		"Port":                          fmt.Sprint(p.Port),
+		"Proxy":                         map[store.ProxyType]string{store.ProxyNone: "No proxy"}[p.Proxy.Type],
+		"Proxy port":                    fmt.Sprint(p.Proxy.Port),
 		"Remote folder":                 p.RemoteDir,
 		"Create missing folders":        onOff(p.CreateDirs),
 		"If the file exists":            map[store.ConflictPolicy]string{store.ConflictRename: "Rename"}[p.ConflictPolicy],

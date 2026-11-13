@@ -3,6 +3,7 @@ package uploader
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/pkg/sftp"
 
+	"github.com/josexy/sshclipboard/internal/secret"
 	"github.com/josexy/sshclipboard/internal/sshconn"
 	"github.com/josexy/sshclipboard/internal/sshconn/sshtest"
 )
@@ -110,6 +112,9 @@ func TestTransientClassification(t *testing.T) {
 		{&sshconn.DialError{Step: sshconn.StepConnect, Err: errors.New("refused")}, true},
 		{&sshconn.DialError{Step: sshconn.StepAuth, Err: errors.New("bad")}, false},
 		{&sshconn.DialError{Step: sshconn.StepHostKey, Err: &sshconn.HostKeyError{}}, false},
+		{&sshconn.DialError{Step: sshconn.StepProxy, Err: errors.New("SOCKS5 proxy p:1080: connection refused")}, true},
+		{&sshconn.DialError{Step: sshconn.StepProxy, Err: fmt.Errorf("SOCKS5 proxy p:1080: %w: x", sshconn.ErrProxyAuth)}, false},
+		{&sshconn.DialError{Step: sshconn.StepProxy, Err: &sshconn.SecretNeededError{Kind: secret.ProxyPassword}}, false},
 		{&SourceError{ErrSourceNotFound}, false},
 		{sshconn.ErrRemoteDirMissing, false},
 		{&os.PathError{Op: "open", Path: "/x", Err: os.ErrPermission}, false},

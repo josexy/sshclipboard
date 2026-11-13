@@ -55,6 +55,27 @@ const (
 	AuthAgent    AuthMethod = "agent"
 )
 
+// ProxyType is how a profile reaches its server.
+type ProxyType string
+
+const (
+	ProxyNone   ProxyType = "none" // connect directly
+	ProxySOCKS5 ProxyType = "socks5"
+)
+
+// Proxy is the proxy a profile connects through. Its password lives in the
+// OS credential store (package secret), like the profile's other secrets.
+type Proxy struct {
+	Type ProxyType
+	Host string
+	Port int
+	// Username signs in to the proxy; "" when the proxy needs no sign-in.
+	Username string
+}
+
+// Enabled tells whether connections go through the proxy.
+func (p Proxy) Enabled() bool { return p.Type != "" && p.Type != ProxyNone }
+
 // ConflictPolicy says what happens when the final remote name exists.
 type ConflictPolicy string
 
@@ -87,7 +108,8 @@ const (
 )
 
 // Profile is an SSH server profile. It holds no secret material: passwords
-// and passphrases live in the OS credential store (package secret).
+// and passphrases, the proxy's included, live in the OS credential store
+// (package secret).
 type Profile struct {
 	ID             int64
 	Name           string
@@ -96,6 +118,7 @@ type Profile struct {
 	Username       string
 	AuthMethod     AuthMethod
 	KeyPath        string
+	Proxy          Proxy
 	RemoteDir      string
 	CreateDirs     bool
 	ConflictPolicy ConflictPolicy
@@ -116,6 +139,7 @@ func NewProfile() Profile {
 	return Profile{
 		Port:           22,
 		AuthMethod:     AuthPassword,
+		Proxy:          Proxy{Type: ProxyNone, Port: 1080},
 		RemoteDir:      "~/clipboard",
 		CreateDirs:     true,
 		ConflictPolicy: ConflictRename,

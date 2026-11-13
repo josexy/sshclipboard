@@ -31,7 +31,7 @@ type HostKeyPrompt struct {
 type SecretPrompt struct {
 	ProfileID   int64
 	ProfileName string
-	Kind        string // "password" or "passphrase"
+	Kind        string // a secret.Kind: "password", "passphrase", or "proxy-password"
 }
 
 // State is what the UI shows: a snapshot the Controller replaces whenever
@@ -66,7 +66,7 @@ type State struct {
 
 // SavedSecrets tells which of a profile's secrets are stored.
 type SavedSecrets struct {
-	Password, Passphrase bool
+	Password, Passphrase, ProxyPassword bool
 }
 
 // Monitoring tells whether automatic capture is on.

@@ -37,7 +37,7 @@ func TestSecretsNeverReachTheDatabase(t *testing.T) {
 	creds := memSecrets{}
 	sec := secret.New(creds)
 
-	secrets := []string{"Pa55-word-dev-box!", "key-passphrase-7Hq2", "second-pw-Zx9"}
+	secrets := []string{"Pa55-word-dev-box!", "key-passphrase-7Hq2", "second-pw-Zx9", "proxy-pw-Qm4!"}
 	p1 := store.NewProfile()
 	p1.Name, p1.Host, p1.Username = "dev-box", "10.0.0.5", "alice"
 	r1, err := saveProfile(ctx, st, sec, ProfileInput{Profile: p1,
@@ -48,8 +48,9 @@ func TestSecretsNeverReachTheDatabase(t *testing.T) {
 	p2 := store.NewProfile()
 	p2.Name, p2.Host, p2.Username, p2.AuthMethod = "prod-box", "10.0.0.6", "bob", store.AuthKey
 	p2.KeyPath = `C:\Users\alice\.ssh\id_ed25519`
+	p2.Proxy = store.Proxy{Type: store.ProxySOCKS5, Host: "proxy.lan", Port: 1080, Username: "bob"}
 	r2, err := saveProfile(ctx, st, sec, ProfileInput{Profile: p2,
-		Passphrase: SecretInput{Value: secrets[1], Set: true}}, nil)
+		Passphrase: SecretInput{Value: secrets[1], Set: true}, ProxyPassword: SecretInput{Value: secrets[3], Set: true}}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +63,8 @@ func TestSecretsNeverReachTheDatabase(t *testing.T) {
 
 	// The secrets are in the credential store.
 	if string(creds[secret.Key(r1.Profile.ID, secret.Password)]) != secrets[2] ||
-		string(creds[secret.Key(r2.Profile.ID, secret.Passphrase)]) != secrets[1] {
+		string(creds[secret.Key(r2.Profile.ID, secret.Passphrase)]) != secrets[1] ||
+		string(creds[secret.Key(r2.Profile.ID, secret.ProxyPassword)]) != secrets[3] {
 		t.Fatalf("credential store %q", creds)
 	}
 
@@ -150,6 +152,11 @@ func TestSaveProfileValidation(t *testing.T) {
 		{FieldName, func(p *store.Profile) { p.Name = "DEV-BOX" }},
 		{FieldUsername, func(p *store.Profile) { p.Username = "" }},
 		{FieldKeyPath, func(p *store.Profile) { p.AuthMethod = store.AuthKey }},
+		{FieldProxyHost, func(p *store.Profile) { p.Proxy.Type, p.Proxy.Host = store.ProxySOCKS5, " " }},
+		{FieldProxyPort, func(p *store.Profile) {
+			p.Proxy = store.Proxy{Type: store.ProxySOCKS5, Host: "proxy.lan", Port: 0}
+		}},
+		{FieldProxyHost, func(p *store.Profile) { p.Proxy.Type, p.Proxy.Host = "http", "proxy.lan" }},
 	} {
 		p := store.NewProfile()
 		p.Name, p.Host, p.Username = "another", "10.0.0.7", "bob"

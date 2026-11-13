@@ -281,7 +281,8 @@ func (c *Controller) reload() error {
 	c.l.settings, c.l.profiles, c.l.rules, c.l.naming = s, ps, rs, ns
 	c.l.saved = make(map[int64]SavedSecrets, len(ps))
 	for _, p := range ps {
-		c.l.saved[p.ID] = SavedSecrets{Password: c.sec.Has(p.ID, secret.Password), Passphrase: c.sec.Has(p.ID, secret.Passphrase)}
+		c.l.saved[p.ID] = SavedSecrets{Password: c.sec.Has(p.ID, secret.Password),
+			Passphrase: c.sec.Has(p.ID, secret.Passphrase), ProxyPassword: c.sec.Has(p.ID, secret.ProxyPassword)}
 	}
 	set, errs := rules.Compile(rs, s.DefaultAction)
 	if len(errs) > 0 {

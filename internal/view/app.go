@@ -265,8 +265,11 @@ func (a *App) prompts(c *ui.Context, s *core.State) {
 		a.secretOpen = true
 		if ui.Modal(c, &a.secretOpen, func() {
 			title := locales.SecretPromptTitle(sp.ProfileName)
-			if sp.Kind == string(secret.Passphrase) {
+			switch secret.Kind(sp.Kind) {
+			case secret.Passphrase:
 				title = locales.PassphrasePromptTitle(sp.ProfileName)
+			case secret.ProxyPassword:
+				title = locales.ProxyPasswordPromptTitle(sp.ProfileName)
 			}
 			Heading(c, title, 18)
 			ui.Text(c, locales.SecretPromptMessage()).Wrap().MaxWidth(360)

@@ -174,7 +174,7 @@ func (c *Controller) DuplicateProfile(id int64, done func(error)) {
 		if err != nil {
 			return err
 		}
-		for _, kind := range []secret.Kind{secret.Password, secret.Passphrase} {
+		for _, kind := range secret.Kinds {
 			if v, err := c.sec.Get(id, kind); err == nil {
 				c.sec.Set(created.ID, kind, v)
 			}
@@ -210,11 +210,7 @@ type formSecrets struct {
 }
 
 func (f formSecrets) Get(id int64, kind secret.Kind) (string, error) {
-	in := f.in.Password
-	if kind == secret.Passphrase {
-		in = f.in.Passphrase
-	}
-	if in.Set && in.Value != "" {
+	if in := f.in.secret(kind); in.Set && in.Value != "" {
 		return in.Value, nil
 	}
 	return f.stored.Get(id, kind)
@@ -285,8 +281,10 @@ func (c *Controller) ProvideSecret(profileID int64, kind secret.Kind, value stri
 		if err != nil {
 			return err
 		}
+		// The error names the missing secret (sshconn.SecretNeededError).
+		missing := "the " + kind.Noun() + " of "
 		for _, e := range failed {
-			if e.ProfileID == profileID && strings.Contains(e.Error, string(kind)) {
+			if e.ProfileID == profileID && strings.Contains(e.Error, missing) {
 				c.retry(e)
 			}
 		}

@@ -7,8 +7,8 @@ CREATE TABLE settings (
   value TEXT NOT NULL CHECK (json_valid(value))
 );
 
--- Profiles hold no secrets: passwords and passphrases live in the OS
--- credential store under profile/<id>/password|passphrase.
+-- Profiles hold no secrets: passwords, passphrases, and proxy passwords live
+-- in the OS credential store under profile/<id>/password|passphrase|proxy-password.
 CREATE TABLE profiles (
   id              INTEGER PRIMARY KEY,
   name            TEXT    NOT NULL UNIQUE COLLATE NOCASE CHECK (length(trim(name)) > 0),
@@ -17,6 +17,10 @@ CREATE TABLE profiles (
   username        TEXT    NOT NULL CHECK (length(trim(username)) > 0),
   auth_method     TEXT    NOT NULL CHECK (auth_method IN ('password', 'key', 'agent')),
   key_path        TEXT    NOT NULL DEFAULT '',
+  proxy_type      TEXT    NOT NULL DEFAULT 'none' CHECK (proxy_type IN ('none', 'socks5')),
+  proxy_host      TEXT    NOT NULL DEFAULT '',
+  proxy_port      INTEGER NOT NULL DEFAULT 1080 CHECK (proxy_port BETWEEN 1 AND 65535),
+  proxy_username  TEXT    NOT NULL DEFAULT '',
   remote_dir      TEXT    NOT NULL DEFAULT '~/clipboard' CHECK (length(trim(remote_dir)) > 0),
   create_dirs     INTEGER NOT NULL DEFAULT 1 CHECK (create_dirs IN (0, 1)),
   conflict_policy TEXT    NOT NULL DEFAULT 'rename' CHECK (conflict_policy IN ('rename', 'overwrite', 'skip')),

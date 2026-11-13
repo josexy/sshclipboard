@@ -1129,6 +1129,96 @@ func (msgs Messages) FieldPassphrase() string {
 	return Catalog.Format(msgs.locale, "fieldPassphrase", nil)
 }
 
+// FieldProxy says "Proxy"
+// in the language the app shows.
+func FieldProxy() string { return In(i18n.Locale()).FieldProxy() }
+
+// FieldProxy says "Proxy"
+// in the language of msgs.
+func (msgs Messages) FieldProxy() string {
+	return Catalog.Format(msgs.locale, "fieldProxy", nil)
+}
+
+// ProxyNone says "No proxy"
+// in the language the app shows.
+func ProxyNone() string { return In(i18n.Locale()).ProxyNone() }
+
+// ProxyNone says "No proxy"
+// in the language of msgs.
+func (msgs Messages) ProxyNone() string {
+	return Catalog.Format(msgs.locale, "proxyNone", nil)
+}
+
+// ProxySOCKS5 says "SOCKS5"
+// in the language the app shows.
+func ProxySOCKS5() string { return In(i18n.Locale()).ProxySOCKS5() }
+
+// ProxySOCKS5 says "SOCKS5"
+// in the language of msgs.
+func (msgs Messages) ProxySOCKS5() string {
+	return Catalog.Format(msgs.locale, "proxySOCKS5", nil)
+}
+
+// ProxyHint says "Connects to the server through a SOCKS5 proxy, such as one opened with ssh -D. The proxy resolves the server's host n…"
+// in the language the app shows.
+func ProxyHint() string { return In(i18n.Locale()).ProxyHint() }
+
+// ProxyHint says "Connects to the server through a SOCKS5 proxy, such as one opened with ssh -D. The proxy resolves the server's host n…"
+// in the language of msgs.
+func (msgs Messages) ProxyHint() string {
+	return Catalog.Format(msgs.locale, "proxyHint", nil)
+}
+
+// FieldProxyHost says "Proxy host"
+// in the language the app shows.
+func FieldProxyHost() string { return In(i18n.Locale()).FieldProxyHost() }
+
+// FieldProxyHost says "Proxy host"
+// in the language of msgs.
+func (msgs Messages) FieldProxyHost() string {
+	return Catalog.Format(msgs.locale, "fieldProxyHost", nil)
+}
+
+// FieldProxyPort says "Proxy port"
+// in the language the app shows.
+func FieldProxyPort() string { return In(i18n.Locale()).FieldProxyPort() }
+
+// FieldProxyPort says "Proxy port"
+// in the language of msgs.
+func (msgs Messages) FieldProxyPort() string {
+	return Catalog.Format(msgs.locale, "fieldProxyPort", nil)
+}
+
+// FieldProxyUsername says "Proxy username"
+// in the language the app shows.
+func FieldProxyUsername() string { return In(i18n.Locale()).FieldProxyUsername() }
+
+// FieldProxyUsername says "Proxy username"
+// in the language of msgs.
+func (msgs Messages) FieldProxyUsername() string {
+	return Catalog.Format(msgs.locale, "fieldProxyUsername", nil)
+}
+
+// ProxyUsernameHint says "Leave empty if the proxy doesn't ask you to sign in."
+// in the language the app shows.
+func ProxyUsernameHint() string { return In(i18n.Locale()).ProxyUsernameHint() }
+
+// ProxyUsernameHint says "Leave empty if the proxy doesn't ask you to sign in."
+// in the language of msgs.
+func (msgs Messages) ProxyUsernameHint() string {
+	return Catalog.Format(msgs.locale, "proxyUsernameHint", nil)
+}
+
+// FieldProxyPassword says "Proxy password"
+// in the language the app shows.
+func FieldProxyPassword() string { return In(i18n.Locale()).FieldProxyPassword() }
+
+// FieldProxyPassword says "Proxy password"
+// in the language of msgs.
+func (msgs Messages) FieldProxyPassword() string {
+	return Catalog.Format(msgs.locale, "fieldProxyPassword", nil)
+}
+
 // FieldRemoteDir says "Remote folder"
 // in the language the app shows.
 func FieldRemoteDir() string { return In(i18n.Locale()).FieldRemoteDir() }
@@ -1379,11 +1469,11 @@ func (msgs Messages) DeleteServerTitle(name string) string {
 	return Catalog.Format(msgs.locale, "deleteServerTitle", map[string]any{"name": name})
 }
 
-// DeleteServerMessage says "Its saved password, passphrase, and trusted host key are removed too."
+// DeleteServerMessage says "Its saved passwords, passphrase, and trusted host key are removed too."
 // in the language the app shows.
 func DeleteServerMessage() string { return In(i18n.Locale()).DeleteServerMessage() }
 
-// DeleteServerMessage says "Its saved password, passphrase, and trusted host key are removed too."
+// DeleteServerMessage says "Its saved passwords, passphrase, and trusted host key are removed too."
 // in the language of msgs.
 func (msgs Messages) DeleteServerMessage() string {
 	return Catalog.Format(msgs.locale, "deleteServerMessage", nil)
@@ -1489,6 +1579,16 @@ func (msgs Messages) StepAuth() string {
 	return Catalog.Format(msgs.locale, "stepAuth", nil)
 }
 
+// StepProxy says "connecting through the proxy"
+// in the language the app shows.
+func StepProxy() string { return In(i18n.Locale()).StepProxy() }
+
+// StepProxy says "connecting through the proxy"
+// in the language of msgs.
+func (msgs Messages) StepProxy() string {
+	return Catalog.Format(msgs.locale, "stepProxy", nil)
+}
+
 // StepRemoteDir says "checking the remote folder"
 // in the language the app shows.
 func StepRemoteDir() string { return In(i18n.Locale()).StepRemoteDir() }
@@ -1583,6 +1683,18 @@ func PassphrasePromptTitle(server string) string {
 // in the language of msgs.
 func (msgs Messages) PassphrasePromptTitle(server string) string {
 	return Catalog.Format(msgs.locale, "passphrasePromptTitle", map[string]any{"server": server})
+}
+
+// ProxyPasswordPromptTitle says "Proxy password for {server}"
+// in the language the app shows.
+func ProxyPasswordPromptTitle(server string) string {
+	return In(i18n.Locale()).ProxyPasswordPromptTitle(server)
+}
+
+// ProxyPasswordPromptTitle says "Proxy password for {server}"
+// in the language of msgs.
+func (msgs Messages) ProxyPasswordPromptTitle(server string) string {
+	return Catalog.Format(msgs.locale, "proxyPasswordPromptTitle", map[string]any{"server": server})
 }
 
 // SecretPromptMessage says "The credential store is unavailable, so the secret is kept only until SSHClipboard quits."

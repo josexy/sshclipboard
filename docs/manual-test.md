@@ -48,6 +48,7 @@ the date and the build's version.
 | 16 | Move and resize the window, quit from the tray, and start again. | The window opens at the same size and position. | |
 | 17 | Copy a very large bitmap (a full 8K or multi-monitor screenshot). | It is recorded as skipped, "content too large", with no staged file. | |
 | 18 | Set notifications to **Errors only**, stop the server's SSH service, and copy a screenshot. Click the notification. | After the retries a notification names the file and "connection refused"; clicking it opens Activity; the tray shows the error badge until the next success or until Activity is opened. | |
+| 19 | Open a SOCKS5 tunnel with `ssh -D 1080 jump-host`. Set `dev-box`'s proxy to **SOCKS5**, `127.0.0.1`, port `1080`, and its host to a name that only resolves behind the jump host. **Test connection**, then copy a screenshot. Stop the tunnel and copy again. | The test succeeds and the screenshot uploads through the tunnel. With the tunnel stopped, the test fails "while connecting through the proxy", and the upload fails with the proxy's error after the retries. | |
 
 ## Notes
 

@@ -19,33 +19,48 @@ var ErrDuplicateName = errors.New("a server with this name already exists")
 // ProfilesRepo stores server profiles.
 type ProfilesRepo struct{ s *Store }
 
-const profileCols = `id, name, host, port, username, auth_method, key_path, remote_dir, create_dirs,
-	conflict_policy, file_mode, copy_back, copy_template, copy_separator, shell_quote, created_at, updated_at`
+const profileCols = `id, name, host, port, username, auth_method, key_path, proxy_type, proxy_host,
+	proxy_port, proxy_username, remote_dir, create_dirs, conflict_policy, file_mode, copy_back, copy_template,
+	copy_separator, shell_quote, created_at, updated_at`
 
 func scanProfile(row []any) Profile {
 	p := Profile{
-		ID:             i64(row[0]),
-		Name:           str(row[1]),
-		Host:           str(row[2]),
-		Port:           int(i64(row[3])),
-		Username:       str(row[4]),
-		AuthMethod:     AuthMethod(str(row[5])),
-		KeyPath:        str(row[6]),
-		RemoteDir:      str(row[7]),
-		CreateDirs:     boolean(row[8]),
-		ConflictPolicy: ConflictPolicy(str(row[9])),
+		ID:         i64(row[0]),
+		Name:       str(row[1]),
+		Host:       str(row[2]),
+		Port:       int(i64(row[3])),
+		Username:   str(row[4]),
+		AuthMethod: AuthMethod(str(row[5])),
+		KeyPath:    str(row[6]),
+		Proxy: Proxy{
+			Type:     ProxyType(str(row[7])),
+			Host:     str(row[8]),
+			Port:     int(i64(row[9])),
+			Username: str(row[10]),
+		},
+		RemoteDir:      str(row[11]),
+		CreateDirs:     boolean(row[12]),
+		ConflictPolicy: ConflictPolicy(str(row[13])),
 		FileMode:       -1,
-		CopyBack:       boolean(row[11]),
-		CopyTemplate:   str(row[12]),
-		CopySeparator:  str(row[13]),
-		ShellQuote:     boolean(row[14]),
-		CreatedAt:      timeOf(row[15]),
-		UpdatedAt:      timeOf(row[16]),
+		CopyBack:       boolean(row[15]),
+		CopyTemplate:   str(row[16]),
+		CopySeparator:  str(row[17]),
+		ShellQuote:     boolean(row[18]),
+		CreatedAt:      timeOf(row[19]),
+		UpdatedAt:      timeOf(row[20]),
 	}
-	if row[10] != nil {
-		p.FileMode = int(i64(row[10]))
+	if row[14] != nil {
+		p.FileMode = int(i64(row[14]))
 	}
 	return p
+}
+
+// proxyTypeArg stores an unset proxy type as "none".
+func proxyTypeArg(t ProxyType) string {
+	if t == "" {
+		return string(ProxyNone)
+	}
+	return string(t)
 }
 
 func fileModeArg(mode int) any {
@@ -85,9 +100,11 @@ func (r ProfilesRepo) Create(ctx context.Context, p Profile) (Profile, error) {
 	now := time.Now()
 	p.CreatedAt, p.UpdatedAt = now, now
 	res, err := r.s.db.Execute(ctx, `INSERT INTO profiles (name, host, port, username, auth_method, key_path,
-		remote_dir, create_dirs, conflict_policy, file_mode, copy_back, copy_template, copy_separator,
-		shell_quote, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		proxy_type, proxy_host, proxy_port, proxy_username, remote_dir, create_dirs, conflict_policy, file_mode,
+		copy_back, copy_template, copy_separator, shell_quote, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		strings.TrimSpace(p.Name), strings.TrimSpace(p.Host), p.Port, p.Username, string(p.AuthMethod), p.KeyPath,
+		proxyTypeArg(p.Proxy.Type), strings.TrimSpace(p.Proxy.Host), p.Proxy.Port, p.Proxy.Username,
 		p.RemoteDir, p.CreateDirs, string(p.ConflictPolicy), fileModeArg(p.FileMode), p.CopyBack,
 		p.CopyTemplate, p.CopySeparator, p.ShellQuote, millis(now), millis(now))
 	if err != nil {
@@ -95,15 +112,18 @@ func (r ProfilesRepo) Create(ctx context.Context, p Profile) (Profile, error) {
 	}
 	p.ID = res.LastInsertID
 	p.Name, p.Host = strings.TrimSpace(p.Name), strings.TrimSpace(p.Host)
+	p.Proxy.Type, p.Proxy.Host = ProxyType(proxyTypeArg(p.Proxy.Type)), strings.TrimSpace(p.Proxy.Host)
 	return p, nil
 }
 
 // Update saves every field of p.
 func (r ProfilesRepo) Update(ctx context.Context, p Profile) error {
 	res, err := r.s.db.Execute(ctx, `UPDATE profiles SET name = ?, host = ?, port = ?, username = ?,
-		auth_method = ?, key_path = ?, remote_dir = ?, create_dirs = ?, conflict_policy = ?, file_mode = ?,
-		copy_back = ?, copy_template = ?, copy_separator = ?, shell_quote = ?, updated_at = ? WHERE id = ?`,
+		auth_method = ?, key_path = ?, proxy_type = ?, proxy_host = ?, proxy_port = ?, proxy_username = ?,
+		remote_dir = ?, create_dirs = ?, conflict_policy = ?, file_mode = ?, copy_back = ?, copy_template = ?,
+		copy_separator = ?, shell_quote = ?, updated_at = ? WHERE id = ?`,
 		strings.TrimSpace(p.Name), strings.TrimSpace(p.Host), p.Port, p.Username, string(p.AuthMethod), p.KeyPath,
+		proxyTypeArg(p.Proxy.Type), strings.TrimSpace(p.Proxy.Host), p.Proxy.Port, p.Proxy.Username,
 		p.RemoteDir, p.CreateDirs, string(p.ConflictPolicy), fileModeArg(p.FileMode), p.CopyBack,
 		p.CopyTemplate, p.CopySeparator, p.ShellQuote, millis(time.Now()), p.ID)
 	if err != nil {

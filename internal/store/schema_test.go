@@ -113,3 +113,28 @@ func TestSchemaV1Checks(t *testing.T) {
 		t.Error("profile names must be unique, case-insensitively")
 	}
 }
+
+// Each profile's proxy, with checked type and port.
+func TestSchemaV1ProxyChecks(t *testing.T) {
+	st := openApp(t)
+	ctx := context.Background()
+	const profile = `INSERT INTO profiles (name, host, username, auth_method, proxy_type, proxy_port,
+		created_at, updated_at) VALUES (?, 'h', 'u', 'password', ?, ?, 0, 0)`
+	if _, err := st.db.Execute(ctx, profile, "ok", "socks5", 1080); err != nil {
+		t.Fatalf("a valid proxy was rejected: %v", err)
+	}
+	for _, b := range []struct {
+		name string
+		args []any
+	}{
+		{"proxy type", []any{"a", "http", 1080}},
+		{"proxy port 0", []any{"b", "socks5", 0}},
+		{"proxy port 70000", []any{"c", "none", 70000}},
+	} {
+		_, err := st.db.Execute(ctx, profile, b.args...)
+		var se *sqlite.Error
+		if !errors.As(err, &se) || se.Code != 19 /* SQLITE_CONSTRAINT */ {
+			t.Errorf("%s: got %v, want a constraint error", b.name, err)
+		}
+	}
+}

@@ -24,7 +24,8 @@ type Config struct {
 	OpenSSHKnownHosts string
 	// DialAgent connects to the SSH agent; nil uses DialAgent.
 	DialAgent func() (net.Conn, error)
-	// DialTimeout bounds the TCP connect and the SSH handshake; 0 is 15 s.
+	// DialTimeout bounds the TCP connect (through the proxy, if any) and
+	// the SSH handshake; 0 is 15 s.
 	DialTimeout time.Duration
 	// KeepaliveInterval is how often idle connections are probed; 0 is
 	// 30 s. Two missed replies close the connection.
@@ -52,6 +53,7 @@ type Step string
 
 const (
 	StepConnect   Step = "connect"
+	StepProxy     Step = "proxy" // connecting through the profile's proxy
 	StepHostKey   Step = "host-key"
 	StepAuth      Step = "authenticate"
 	StepRemoteDir Step = "remote-directory"
@@ -130,11 +132,12 @@ func (c *Config) Dial(ctx context.Context, t Target) (*Conn, error) {
 		// The agent signs during the handshake only.
 		defer agentConn.Close()
 	}
+	// Host keys are verified against addr, the server's own host and port,
+	// even through a proxy.
 	addr := net.JoinHostPort(t.Host, strconv.Itoa(t.Port))
-	d := net.Dialer{Timeout: c.dialTimeout()}
-	nc, err := d.DialContext(ctx, "tcp", addr)
+	nc, err := c.dialNet(ctx, t, addr)
 	if err != nil {
-		return nil, &DialError{Step: StepConnect, Err: err}
+		return nil, err
 	}
 	// The handshake honors the context and the timeout.
 	nc.SetDeadline(time.Now().Add(c.dialTimeout()))

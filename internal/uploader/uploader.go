@@ -346,23 +346,26 @@ func (u *Uploader) attempt(ctx context.Context, js *jobState) (string, *sshconn.
 }
 
 // Transient tells whether an attempt's error is worth a retry: network
-// errors, timeouts, and dropped connections. Authentication and host key
-// problems, server refusals (permission denied, no such file), a missing
-// source file, and a missing directory are permanent. conn is the
-// attempt's connection, nil if it never connected.
+// errors (to the server or its proxy), timeouts, and dropped connections.
+// Authentication and host key problems, a proxy that refuses the sign-in
+// or whose password is missing, server refusals (permission denied, no
+// such file), a missing source file, and a missing directory are
+// permanent. conn is the attempt's connection, nil if it never connected.
 func Transient(err error, conn *sshconn.Conn) bool {
 	var (
-		de *sshconn.DialError
-		se *SourceError
-		hk *sshconn.HostKeyError
-		ne net.Error
+		de   *sshconn.DialError
+		se   *SourceError
+		hk   *sshconn.HostKeyError
+		need *sshconn.SecretNeededError
+		ne   net.Error
 	)
 	switch {
 	case err == nil, errors.As(err, &se), errors.As(err, &hk), errors.Is(err, sshconn.ErrRemoteDirMissing),
 		errors.Is(err, ErrNoFreeName), errors.Is(err, context.Canceled):
 		return false
 	case errors.As(err, &de):
-		return de.Step == sshconn.StepConnect
+		return de.Step == sshconn.StepConnect || de.Step == sshconn.StepProxy &&
+			!errors.Is(err, sshconn.ErrProxyAuth) && !errors.As(err, &need)
 	case errors.Is(err, sftp.ErrSSHFxConnectionLost), errors.Is(err, sftp.ErrSSHFxNoConnection),
 		errors.Is(err, io.EOF), errors.Is(err, io.ErrUnexpectedEOF), errors.As(err, &ne):
 		return true

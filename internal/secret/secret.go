@@ -12,9 +12,21 @@ import (
 type Kind string
 
 const (
-	Password   Kind = "password"
-	Passphrase Kind = "passphrase"
+	Password      Kind = "password"
+	Passphrase    Kind = "passphrase"
+	ProxyPassword Kind = "proxy-password"
 )
+
+// Kinds lists every kind of secret a profile can have.
+var Kinds = []Kind{Password, Passphrase, ProxyPassword}
+
+// Noun returns how messages name the secret, such as "proxy password".
+func (k Kind) Noun() string {
+	if k == ProxyPassword {
+		return "proxy password"
+	}
+	return string(k)
+}
 
 // Backend is a credential store. mygo.Secrets implements it.
 type Backend interface {
@@ -32,7 +44,7 @@ var ErrNotFound = errors.New("secret not found")
 var ErrUnavailable = errors.New("the credential store is unavailable")
 
 // Store keeps profile secrets in a credential store under
-// profile/<id>/password and profile/<id>/passphrase. When the store fails,
+// profile/<id>/<kind>, such as profile/1/password. When the store fails,
 // as when it is unsupported, secrets are kept in memory for this session
 // only. It is safe from any goroutine.
 type Store struct {
@@ -125,7 +137,7 @@ func (s *Store) Clear(profileID int64, kind Kind) error {
 // that is unsupported has nothing to delete.
 func (s *Store) Delete(profileID int64) error {
 	var errs []error
-	for _, kind := range []Kind{Password, Passphrase} {
+	for _, kind := range Kinds {
 		errs = append(errs, s.Clear(profileID, kind))
 	}
 	return errors.Join(errs...)

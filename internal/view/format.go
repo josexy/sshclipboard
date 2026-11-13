@@ -123,6 +123,8 @@ func StepText(s sshconn.Step) string {
 	switch s {
 	case sshconn.StepConnect:
 		return locales.StepConnect()
+	case sshconn.StepProxy:
+		return locales.StepProxy()
 	case sshconn.StepHostKey:
 		return locales.StepHostKey()
 	case sshconn.StepAuth:

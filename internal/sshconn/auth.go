@@ -25,15 +25,16 @@ type Target struct {
 	User       string
 	AuthMethod store.AuthMethod
 	KeyPath    string
+	Proxy      store.Proxy
 }
 
 // TargetOf returns the connection target of a profile.
 func TargetOf(p store.Profile) Target {
 	return Target{ProfileID: p.ID, Name: p.Name, Host: p.Host, Port: p.Port, User: p.Username,
-		AuthMethod: p.AuthMethod, KeyPath: p.KeyPath}
+		AuthMethod: p.AuthMethod, KeyPath: p.KeyPath, Proxy: p.Proxy}
 }
 
-// Secrets is where auth methods read passwords and passphrases.
+// Secrets is where auth methods and proxies read passwords and passphrases.
 // *secret.Store implements it.
 type Secrets interface {
 	Get(profileID int64, kind secret.Kind) (string, error)
@@ -56,7 +57,7 @@ type SecretNeededError struct {
 }
 
 func (e *SecretNeededError) Error() string {
-	return fmt.Sprintf("the %s of this server is not available: %v", e.Kind, e.Err)
+	return fmt.Sprintf("the %s of this server is not available: %v", e.Kind.Noun(), e.Err)
 }
 
 func (e *SecretNeededError) Unwrap() error { return e.Err }

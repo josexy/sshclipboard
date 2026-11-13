@@ -7,6 +7,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/josexy/sshclipboard/internal/core"
+	"github.com/josexy/sshclipboard/internal/secret"
 	"github.com/josexy/sshclipboard/internal/sshconn"
 	"github.com/josexy/sshclipboard/internal/store"
 )
@@ -188,4 +189,105 @@ func TestAddServerIsAccent(t *testing.T) {
 			t.Errorf("dark %v: button fill %v, want %v", dark, got, want)
 		}
 	}
+}
+
+// A SOCKS5 proxy shows its address and sign-in fields, which are saved
+// with the profile; its password is a secret like the others.
+func TestServersProxy(t *testing.T) {
+	f := newFake()
+	_, tt := newTester(t, f)
+	click(t, tt, "Servers")
+	click(t, tt, "Add server")
+	typeInto(t, tt, "Name", "staging")
+	typeInto(t, tt, "Host", "dev-box.internal")
+	typeInto(t, tt, "Username", "alice")
+	if tt.HasText("Proxy host") {
+		t.Error("proxy fields show without a proxy")
+	}
+	click(t, tt, "No proxy") // the select shows the type
+	click(t, tt, "SOCKS5")
+	hasText(t, tt, "Proxy port")
+	hasTextContaining(t, tt, "resolves the server's host name")
+
+	// A missing host and a bad port show on their fields.
+	click(t, tt, "Proxy port")
+	for range 4 {
+		tt.Key(0, ui.KeyBackspace)
+	}
+	tt.Type("x")
+	click(t, tt, "Save")
+	hasText(t, tt, "Enter a port from 1 to 65535")
+	click(t, tt, "Proxy port")
+	tt.Key(0, ui.KeyBackspace)
+	tt.Type("1081")
+	click(t, tt, "Save")
+	hasText(t, tt, "Required")
+
+	typeInto(t, tt, "Proxy host", "127.0.0.1")
+	typeInto(t, tt, "Proxy username", "bob")
+	typeInto(t, tt, "Proxy password", "proxy-pw")
+	click(t, tt, "Save")
+	in := f.saved[len(f.saved)-1]
+	want := store.Proxy{Type: store.ProxySOCKS5, Host: "127.0.0.1", Port: 1081, Username: "bob"}
+	if in.Profile.Proxy != want || in.ProxyPassword != (core.SecretInput{Value: "proxy-pw", Set: true}) ||
+		in.Password.Set {
+		t.Errorf("saved proxy %+v, proxy password %+v, password %+v", in.Profile.Proxy, in.ProxyPassword, in.Password)
+	}
+	hasText(t, tt, "Saved")
+
+	// Turning the proxy off hides its fields and keeps its settings.
+	click(t, tt, "SOCKS5")
+	click(t, tt, "No proxy")
+	if tt.HasText("Proxy host") {
+		t.Error("proxy fields show after turning the proxy off")
+	}
+	click(t, tt, "Save")
+	in = f.saved[len(f.saved)-1]
+	if in.Profile.Proxy.Enabled() || in.Profile.Proxy.Host != "127.0.0.1" || in.Profile.Proxy.Port != 1081 {
+		t.Errorf("proxy off: %+v", in.Profile.Proxy)
+	}
+}
+
+// A saved proxy password is never shown either.
+func TestServersProxyPasswordNeverPrefills(t *testing.T) {
+	f := newFake()
+	f.edit(func(s *core.State) {
+		s.Profiles[0].Proxy = store.Proxy{Type: store.ProxySOCKS5, Host: "127.0.0.1", Port: 1080, Username: "bob"}
+		s.Saved[1] = core.SavedSecrets{Password: true, ProxyPassword: true}
+	})
+	_, tt := newTester(t, f)
+	click(t, tt, "Servers")
+	click(t, tt, "Active")
+	pw, ok := tt.AccessByRole(ui.RoleTextField, "Proxy password")
+	if !ok || pw.Value != "" || pw.Placeholder != "Saved. Type to replace it." {
+		t.Fatalf("proxy password field %+v", pw)
+	}
+	click(t, tt, "Save")
+	if in := f.saved[len(f.saved)-1]; in.ProxyPassword.Set || in.Profile.Proxy.Port != 1080 {
+		t.Errorf("saved %+v", in)
+	}
+}
+
+func TestServersProxyTestFailure(t *testing.T) {
+	f := newFake()
+	f.test = sshconn.CheckResult{Step: sshconn.StepProxy,
+		Err: errors.New("SOCKS5 proxy 127.0.0.1:1080: sign-in refused: username/password authentication failed")}
+	_, tt := newTester(t, f)
+	click(t, tt, "Servers")
+	click(t, tt, "prod-box")
+	click(t, tt, "Test connection")
+	hasText(t, tt, "Failed while connecting through the proxy: SOCKS5 proxy 127.0.0.1:1080: sign-in refused: username/password authentication failed")
+}
+
+// Spec "Credential store unavailable", for the proxy password.
+func TestProxyPasswordPrompt(t *testing.T) {
+	f := newFake()
+	f.edit(func(s *core.State) {
+		s.SecretPrompt = &core.SecretPrompt{ProfileID: 1, ProfileName: "dev-box", Kind: string(secret.ProxyPassword)}
+	})
+	_, tt := newTester(t, f)
+	hasText(t, tt, "Proxy password for dev-box")
+	tt.Type("proxy-pw")
+	click(t, tt, "Connect")
+	f.called(t, "ProvideSecret(1, proxy-password, proxy-pw)")
 }

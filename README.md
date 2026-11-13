@@ -59,7 +59,12 @@ The bundles are written to `build/windows-amd64/` and `build/windows-arm64/`.
    - **SSH agent**: uses the Windows **OpenSSH Authentication Agent** service,
      which must be running (Services → *OpenSSH Authentication Agent* →
      Startup type *Automatic*, then Start).
-4. **Save**, then **Test connection**. The first connection shows the
+4. If the server is only reachable through a proxy, set **Proxy** to
+   **SOCKS5** and enter the proxy's host and port (such as `127.0.0.1` and
+   `1080` for a tunnel opened with `ssh -D 1080 jump-host`). Add a username
+   and password only if the proxy asks for them. The proxy resolves the
+   server's host name, so names that only resolve behind it work.
+5. **Save**, then **Test connection**. The first connection shows the
    server's host key fingerprint: compare it with the server's
    (`ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`) and choose **Trust**.
    Hosts you already trust in `%USERPROFILE%\.ssh\known_hosts` are recognized
@@ -89,6 +94,8 @@ header or the tray menu.
 | File names | `{name}.{ext}` |
 | Text file names | `clip_{datetime}.{ext}` |
 | Port | 22 |
+| Proxy | No proxy |
+| Proxy port | 1080 |
 | Remote folder | `~/clipboard` |
 | Create missing folders | On |
 | If the file exists | Rename |
@@ -112,10 +119,10 @@ header or the tray menu.
 - **Password-manager content is never captured.** Content marked private by
   password managers (KeePass, 1Password, Bitwarden) is ignored. You can turn
   this off in Settings, but there is little reason to.
-- **Credentials stay in Windows.** Passwords and key passphrases are kept in
-  the Windows Credential Manager, never in the app's database or logs. If the
-  Credential Manager is unavailable, the app asks for them and keeps them only
-  until it quits.
+- **Credentials stay in Windows.** Passwords, key passphrases, and proxy
+  passwords are kept in the Windows Credential Manager, never in the app's
+  database or logs. If the Credential Manager is unavailable, the app asks for
+  them and keeps them only until it quits.
 - **Host keys are verified.** Unknown or changed server keys need your
   approval, so uploads can't silently go to an impostor.
 - **Local data.** The database (`sshclipboard.db`) and the staging folder for
@@ -127,6 +134,11 @@ header or the tray menu.
 
 - **"The SSH agent is unavailable"**: start the *OpenSSH Authentication Agent*
   service, or use a key file.
+- **"Failed while connecting through the proxy"**: the SOCKS5 proxy is not
+  running or not reachable, it refused the proxy username or password
+  ("sign-in refused"), or it could not reach the server. Check the proxy's
+  host and port, and that the server's host and port are right as the proxy
+  sees them.
 - **"The host key of … changed"**: the server's key differs from the trusted
   one. If you reinstalled the server, choose **Replace**; otherwise, find out
   why before you do.

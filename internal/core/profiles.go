@@ -16,6 +16,8 @@ const (
 	FieldPort      = "port"
 	FieldUsername  = "username"
 	FieldKeyPath   = "key_path"
+	FieldProxyHost = "proxy_host"
+	FieldProxyPort = "proxy_port"
 	FieldRemoteDir = "remote_dir"
 	FieldFileMode  = "file_mode"
 	FieldTemplate  = "copy_template"
@@ -29,6 +31,7 @@ var (
 	ErrNameTaken   = store.ErrDuplicateName
 	ErrFileMode    = errors.New("file mode must be an octal mode such as 0644")
 	ErrAuthMethod  = errors.New("unknown authentication method")
+	ErrProxyType   = errors.New("unknown proxy type")
 	ErrConflictPol = errors.New("unknown conflict policy")
 )
 
@@ -37,7 +40,8 @@ type FieldErrors map[string]error
 
 func (fe FieldErrors) Error() string {
 	var parts []string
-	for _, f := range []string{FieldName, FieldHost, FieldPort, FieldUsername, FieldKeyPath, FieldRemoteDir, FieldFileMode, FieldTemplate} {
+	for _, f := range []string{FieldName, FieldHost, FieldPort, FieldUsername, FieldKeyPath, FieldProxyHost,
+		FieldProxyPort, FieldRemoteDir, FieldFileMode, FieldTemplate} {
 		if err := fe[f]; err != nil {
 			parts = append(parts, f+": "+err.Error())
 		}
@@ -71,6 +75,19 @@ func ValidateProfile(p store.Profile, extra func(store.Profile, FieldErrors)) Fi
 	default:
 		fe[FieldKeyPath] = ErrAuthMethod
 	}
+	// A disabled proxy's fields are kept but not checked.
+	switch p.Proxy.Type {
+	case store.ProxyNone, "":
+	case store.ProxySOCKS5:
+		if strings.TrimSpace(p.Proxy.Host) == "" {
+			fe[FieldProxyHost] = ErrRequired
+		}
+		if p.Proxy.Port < 1 || p.Proxy.Port > 65535 {
+			fe[FieldProxyPort] = ErrPortRange
+		}
+	default:
+		fe[FieldProxyHost] = ErrProxyType
+	}
 	switch p.ConflictPolicy {
 	case store.ConflictRename, store.ConflictOverwrite, store.ConflictSkip:
 	default:
@@ -101,9 +118,21 @@ type SecretInput struct {
 
 // ProfileInput is what the Servers form saves.
 type ProfileInput struct {
-	Profile    store.Profile
-	Password   SecretInput
-	Passphrase SecretInput
+	Profile       store.Profile
+	Password      SecretInput
+	Passphrase    SecretInput
+	ProxyPassword SecretInput
+}
+
+// secret returns the form's input for a kind of secret.
+func (in ProfileInput) secret(kind secret.Kind) SecretInput {
+	switch kind {
+	case secret.Passphrase:
+		return in.Passphrase
+	case secret.ProxyPassword:
+		return in.ProxyPassword
+	}
+	return in.Password
 }
 
 // SaveResult says what SaveProfile stored.
@@ -136,20 +165,18 @@ func saveProfile(ctx context.Context, st *store.Store, sec *secret.Store, in Pro
 		return SaveResult{}, err
 	}
 	res := SaveResult{Profile: p}
-	for _, s := range []struct {
-		kind secret.Kind
-		in   SecretInput
-	}{{secret.Password, in.Password}, {secret.Passphrase, in.Passphrase}} {
-		if !s.in.Set {
+	for _, kind := range secret.Kinds {
+		si := in.secret(kind)
+		if !si.Set {
 			continue
 		}
-		if s.in.Value == "" {
-			if err := sec.Clear(p.ID, s.kind); err != nil {
+		if si.Value == "" {
+			if err := sec.Clear(p.ID, kind); err != nil {
 				return res, err
 			}
 			continue
 		}
-		if sec.Set(p.ID, s.kind, s.in.Value) {
+		if sec.Set(p.ID, kind, si.Value) {
 			res.SessionOnly = true
 		}
 	}

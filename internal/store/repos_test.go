@@ -109,6 +109,34 @@ func TestProfilesRepo(t *testing.T) {
 	}
 }
 
+func TestProfilesRepoProxy(t *testing.T) {
+	st := storetest.Open(t)
+	dev := must[store.Profile](t)(st.Profiles.Create(ctx, newProfile("dev-box")))
+	if got := must[store.Profile](t)(st.Profiles.Get(ctx, dev.ID)); got.Proxy != (store.Proxy{Type: store.ProxyNone, Port: 1080}) {
+		t.Errorf("a new profile's proxy %+v", got.Proxy)
+	}
+
+	dev.Proxy = store.Proxy{Type: store.ProxySOCKS5, Host: " proxy.lan ", Port: 1081, Username: "bob"}
+	if err := st.Profiles.Update(ctx, dev); err != nil {
+		t.Fatal(err)
+	}
+	want := store.Proxy{Type: store.ProxySOCKS5, Host: "proxy.lan", Port: 1081, Username: "bob"}
+	if got := must[store.Profile](t)(st.Profiles.Get(ctx, dev.ID)); got.Proxy != want {
+		t.Errorf("updated proxy %+v, want %+v", got.Proxy, want)
+	}
+
+	// An unset type is stored as "none".
+	p := newProfile("bare")
+	p.Proxy = store.Proxy{Port: 1080}
+	created := must[store.Profile](t)(st.Profiles.Create(ctx, p))
+	if created.Proxy.Type != store.ProxyNone {
+		t.Errorf("created %+v", created.Proxy)
+	}
+	if got := must[store.Profile](t)(st.Profiles.Get(ctx, created.ID)); got.Proxy.Type != store.ProxyNone {
+		t.Errorf("stored %+v", got.Proxy)
+	}
+}
+
 func TestDeleteActiveProfile(t *testing.T) {
 	st := storetest.Open(t)
 	dev := must[store.Profile](t)(st.Profiles.Create(ctx, newProfile("dev-box")))

@@ -105,20 +105,26 @@ func TestUnsupportedStoreFallsBackToSession(t *testing.T) {
 	}
 }
 
-func TestDeleteRemovesBothSecrets(t *testing.T) {
+func TestDeleteRemovesEverySecret(t *testing.T) {
 	b := newFake()
 	s := New(b)
 	s.Set(5, Password, "a")
 	s.Set(5, Passphrase, "b")
+	s.Set(5, ProxyPassword, "c")
 	s.Set(6, Password, "other")
+	if string(b.m["profile/5/proxy-password"]) != "c" {
+		t.Fatalf("stored %v", b.m)
+	}
 	if err := s.Delete(5); err != nil {
 		t.Fatal(err)
 	}
 	if len(b.m) != 1 || string(b.m["profile/6/password"]) != "other" {
 		t.Errorf("left %v", b.m)
 	}
-	if _, err := s.Get(5, Passphrase); !errors.Is(err, ErrNotFound) {
-		t.Errorf("after delete: %v", err)
+	for _, kind := range []Kind{Password, Passphrase, ProxyPassword} {
+		if _, err := s.Get(5, kind); !errors.Is(err, ErrNotFound) {
+			t.Errorf("%s after delete: %v", kind, err)
+		}
 	}
 	if err := s.Delete(5); err != nil {
 		t.Errorf("deleting twice: %v", err)
