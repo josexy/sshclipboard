@@ -169,7 +169,7 @@ func (a *App) serversPage(c *ui.Context, t *ui.Theme, s *core.State) {
 	vm := &a.servers
 	ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
 		Heading(c, locales.ServersTitle(), 24).Grow(1)
-		if ui.PrimaryButton(c, locales.ServersAdd()).FontWeight(600).Clicked() {
+		if primaryButton(c, iconPlus, locales.ServersAdd()).FontWeight(600).Clicked() {
 			vm.open(store.NewProfile())
 		}
 	})
@@ -182,13 +182,18 @@ func (a *App) serversPage(c *ui.Context, t *ui.Theme, s *core.State) {
 		ui.Column(c).Width(200).Gap(4).Role(ui.RoleList).Label(locales.ServersTitle()).Children(func() {
 			for _, p := range s.Profiles {
 				p := p
-				label := p.Name
-				b := ui.Button(c, label).Key(p.ID).FillWidth().Selected(vm.editing && vm.id == p.ID)
-				if s.Active != nil && s.Active.ID == p.ID {
-					b.Description(locales.ServerActive()).Children(func() {
-						ui.Badge(c, locales.ServerActive())
-					})
+				active := s.Active != nil && s.Active.ID == p.ID
+				b := ui.Button(c, "").Key(p.ID).FillWidth().Selected(vm.editing && vm.id == p.ID).Label(p.Name)
+				if active {
+					b.Description(locales.ServerActive())
 				}
+				b.Children(func() {
+					icon(c, iconServer)
+					ui.Text(c, p.Name).SingleLine().Grow(1)
+					if active {
+						ui.Badge(c, locales.ServerActive())
+					}
+				})
 				if b.Clicked() {
 					vm.open(p)
 				}
@@ -220,14 +225,14 @@ func (a *App) serverForm(c *ui.Context, t *ui.Theme, s *core.State) {
 	}
 
 	ui.Row(c).Gap(8).Wrap().Children(func() {
-		if ui.PrimaryButton(c, locales.Save()).FontWeight(600).Disabled(vm.saving).Clicked() {
+		if primaryButton(c, iconSave, locales.Save()).FontWeight(600).Disabled(vm.saving).Clicked() {
 			a.saveServer()
 		}
 		label := locales.TestConnection()
 		if vm.testing {
 			label = locales.Testing()
 		}
-		if ui.Button(c, label).Disabled(vm.testing).Clicked() {
+		if button(c, iconPlugZap, label).Disabled(vm.testing).Clicked() {
 			in, fe := vm.input()
 			if fe != nil {
 				vm.errs = fe
@@ -240,28 +245,29 @@ func (a *App) serverForm(c *ui.Context, t *ui.Theme, s *core.State) {
 		}
 		if vm.id != 0 {
 			if s.Active == nil || s.Active.ID != vm.id {
-				if ui.Button(c, locales.MakeActive()).Clicked() {
+				if button(c, iconCircleDot, locales.MakeActive()).Clicked() {
 					a.ctrl.SetActiveProfile(vm.id, nil)
 				}
 			}
-			if ui.Button(c, locales.Duplicate()).Clicked() {
+			// Secondary actions show only their icons, to keep the row on one line.
+			if iconButton(c, iconCopy, locales.Duplicate(), locales.Duplicate()).Clicked() {
 				a.ctrl.DuplicateProfile(vm.id, nil)
 			}
-			if ui.Button(c, locales.Delete()).Clicked() {
+			if iconButton(c, iconTrash, locales.Delete(), locales.Delete()).Clicked() {
 				vm.deleteOpen = true
 			}
 		}
 		if vm.saved {
-			ui.Text(c, locales.Saved()).TextColor(t.Success).Role(ui.RoleStatus)
+			iconText(c, iconCheck, locales.Saved(), t.Success).AlignSelf(ui.Center).Role(ui.RoleStatus)
 		}
 	})
 
 	if r := vm.test; r != nil {
 		ui.Row(c).Padding(10, 14).Radius(t.Radius).Background(t.Surface).Role(ui.RoleStatus).Children(func() {
 			if r.OK() {
-				ui.Text(c, locales.TestOK(r.Dir)).TextColor(t.Success).Wrap()
+				iconText(c, iconCircleCheck, locales.TestOK(r.Dir), t.Success)
 			} else {
-				ui.Text(c, locales.TestFailed(StepText(r.Step), r.Err.Error())).TextColor(t.Danger).Wrap()
+				iconText(c, iconCircleX, locales.TestFailed(StepText(r.Step), r.Err.Error()), t.Danger)
 			}
 		})
 	}
@@ -285,7 +291,7 @@ func (a *App) serverForm(c *ui.Context, t *ui.Theme, s *core.State) {
 			serverField(c, locales.FieldKeyPath(), func() {
 				ui.Row(c).Gap(8).Children(func() {
 					ui.TextInput(c, &vm.p.KeyPath).Grow(1).MaxWidth(320).Label(locales.FieldKeyPath())
-					if ui.Button(c, locales.Browse()).Shrink(0).Clicked() && a.plat.PickFile != nil {
+					if button(c, iconFolderOpen, locales.Browse()).Shrink(0).Clicked() && a.plat.PickFile != nil {
 						a.plat.PickFile(func(p string) {
 							if p != "" {
 								vm.p.KeyPath = p

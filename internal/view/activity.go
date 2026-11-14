@@ -81,39 +81,43 @@ func (a *App) activityPagination(c *ui.Context, t *ui.Theme, s *core.State) {
 		a.requestHistory(f)
 	}
 	ui.Row(c).Key("pagination").AlignItems(ui.Center).Justify(ui.End).Gap(8).Children(func() {
-		ui.Button(c.Key("previous-page"), locales.ActivityPreviousPage()).
+		button(c.Key("previous-page"), iconChevronLeft, locales.ActivityPreviousPage()).
 			Disabled(vm.pending || page <= 1).OnClick(func() { changePage(-1) })
 		ui.Text(c, locales.ActivityPageNumber(page, pages)).TextColor(t.TextMuted).Role(ui.RoleStatus)
-		ui.Button(c.Key("next-page"), locales.ActivityNextPage()).
-			Disabled(vm.pending || page >= pages).OnClick(func() { changePage(1) })
+		// The arrow of Next follows its label.
+		ui.Button(c.Key("next-page"), "").Children(func() {
+			ui.Text(c, locales.ActivityNextPage()).SingleLine()
+			icon(c, iconChevronRight)
+		}).Disabled(vm.pending || page >= pages).OnClick(func() { changePage(1) })
 	})
 }
 
 func (a *App) activityEntryMenu(m *ui.Menu, e store.HistoryEntry) {
-	add := func(label string, run func()) {
-		if m.Item(label).Chosen() {
+	ic := entryMenuIcons()
+	add := func(label string, img ui.MenuIcon, run func()) {
+		if m.Item(label).Icon(img).Chosen() {
 			run()
 		}
 	}
 	if e.Status == store.StatusUploaded && e.RemotePath != "" {
-		add(locales.ActionCopyPath(), func() { a.ctrl.CopyRemotePath(e.ID, nil) })
+		add(locales.ActionCopyPath(), ic.copy, func() { a.ctrl.CopyRemotePath(e.ID, nil) })
 	}
 	if e.Status == store.StatusFailed || e.Status == store.StatusCancelled {
-		add(locales.ActionRetry(), func() { a.ctrl.Retry(e.ID, nil) })
+		add(locales.ActionRetry(), ic.retry, func() { a.ctrl.Retry(e.ID, nil) })
 	}
 	if e.Status == store.StatusSkipped && e.LocalPath != "" && e.Error != store.ReasonFolder {
-		add(locales.ActionUploadAnyway(), func() { a.ctrl.UploadAnyway(e.ID, nil) })
+		add(locales.ActionUploadAnyway(), ic.upload, func() { a.ctrl.UploadAnyway(e.ID, nil) })
 	}
 	if e.Status.Active() {
-		add(locales.ActionCancel(), func() { a.ctrl.Cancel(e.ID) })
+		add(locales.ActionCancel(), ic.cancel, func() { a.ctrl.Cancel(e.ID) })
 	}
 	if a.plat.OpenFile != nil && core.LocalFileExists(e) {
-		add(locales.ActionOpenFile(), func() { a.plat.OpenFile(e.LocalPath) })
+		add(locales.ActionOpenFile(), ic.open, func() { a.plat.OpenFile(e.LocalPath) })
 	}
 	if a.plat.ShowInFolder != nil && core.LocalFileExists(e) {
-		add(locales.ActionShowInFolder(), func() { a.plat.ShowInFolder(e.LocalPath) })
+		add(locales.ActionShowInFolder(), ic.folder, func() { a.plat.ShowInFolder(e.LocalPath) })
 	}
-	add(locales.ActionDelete(), func() { a.ctrl.DeleteEntry(e.ID, nil) })
+	add(locales.ActionDelete(), ic.delete, func() { a.ctrl.DeleteEntry(e.ID, nil) })
 }
 
 func (a *App) activityPage(c *ui.Context, t *ui.Theme, s *core.State) {
@@ -123,14 +127,16 @@ func (a *App) activityPage(c *ui.Context, t *ui.Theme, s *core.State) {
 
 	// Today's summary.
 	ui.Row(c).Gap(24).Role(ui.RoleStatus).Children(func() {
-		ui.Text(c, locales.SummaryUploaded(s.Summary.Uploaded)).Bold()
-		ui.Text(c, locales.SummaryBytes(HumanSize(s.Summary.Bytes))).TextColor(t.TextMuted)
-		failed := ui.Text(c, locales.SummaryFailed(s.Summary.Failed))
+		ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
+			icon(c, iconCircleCheck).TextColor(t.Success)
+			ui.Text(c, locales.SummaryUploaded(s.Summary.Uploaded)).Bold()
+		})
+		iconText(c, iconHardDriveUpload, locales.SummaryBytes(HumanSize(s.Summary.Bytes)), t.TextMuted)
+		failed := t.TextMuted
 		if s.Summary.Failed > 0 {
-			failed.TextColor(t.Danger)
-		} else {
-			failed.TextColor(t.TextMuted)
+			failed = t.Danger
 		}
+		iconText(c, iconCircleX, locales.SummaryFailed(s.Summary.Failed), failed)
 	})
 
 	// Search and filters.
@@ -142,7 +148,7 @@ func (a *App) activityPage(c *ui.Context, t *ui.Theme, s *core.State) {
 			Label(locales.KindAll())
 		ui.Checkbox(c, &vm.hideSkipped, locales.HideSkipped())
 		ui.Spacer(c)
-		if ui.Button(c, locales.ActionClearHistory()).Clicked() {
+		if button(c, iconTrash, locales.ActionClearHistory()).Clicked() {
 			vm.clearOpen = true
 		}
 	})
@@ -163,11 +169,15 @@ func (a *App) activityPage(c *ui.Context, t *ui.Theme, s *core.State) {
 	vm.shown = s.Filter
 	vm.arrival = s.HistoryArrival
 	if len(rows) == 0 {
-		msg := locales.ActivityEmpty()
+		msg, svg := locales.ActivityEmpty(), iconClipboardList
 		if !sameHistoryCriteria(s.Filter, store.Filter{}) {
-			msg = locales.ActivityNoMatch()
+			msg, svg = locales.ActivityNoMatch(), iconSearchX
 		}
-		ui.Text(c, msg).TextColor(t.TextMuted).Padding(24, 0)
+		ui.Column(c).Grow(1).FillWidth().Justify(ui.Center).AlignItems(ui.Center).Gap(12).Padding(24, 0).
+			TextColor(t.TextMuted).Children(func() {
+			ui.Icon(c, svg).Size(40, 40)
+			ui.Text(c, msg).Wrap().MaxWidth(360).TextAlign(ui.Center)
+		})
 	} else {
 		vm.list.Key = func(i int) any {
 			if i < len(rows) {
@@ -219,7 +229,7 @@ func (a *App) activityCell(c *ui.Context, t *ui.Theme, s *core.State, e store.Hi
 		if b := a.thumbs.get(e.ThumbPath); b != nil {
 			ui.Image(c, b).Height(28).MaxWidth(56).Fit(ui.Contain).Radius(4).Label(e.OriginalName)
 		} else {
-			ui.Text(c, kindLabel(e.Kind)).TextColor(fg(t.TextMuted)).FontSize(11)
+			ui.Icon(c, kindIcon(e.Kind)).Size(20, 20).TextColor(fg(t.TextMuted)).Label(kindLabel(e.Kind))
 		}
 	case 1:
 		ui.Text(c, e.OriginalName).TextColor(fg(t.Text)).SingleLine()
@@ -234,7 +244,10 @@ func (a *App) activityCell(c *ui.Context, t *ui.Theme, s *core.State, e store.Hi
 			ui.Text(c, detail).TextColor(fg(t.TextMuted)).FontSize(12).SingleLine()
 		}
 	case 2:
-		ui.Text(c, StatusLabel(e.Status)).TextColor(fg(StatusColor(t, e.Status))).FontWeight(600)
+		ui.Row(c).Gap(6).AlignItems(ui.Center).TextColor(fg(StatusColor(t, e.Status))).Children(func() {
+			icon(c, statusIcon(e.Status))
+			ui.Text(c, StatusLabel(e.Status)).FontWeight(600)
+		})
 		if p, ok := s.Progress[e.ID]; ok && p.Total > 1024*1024 && e.Status == store.StatusUploading {
 			pct := int(p.Sent * 100 / max(p.Total, 1))
 			ui.Progress(c, float64(p.Sent)/float64(max(p.Total, 1))).Width(110)

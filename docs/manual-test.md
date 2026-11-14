@@ -42,7 +42,7 @@ the date and the build's version.
 | 10 | Close the window (title bar ×). Copy a screenshot. | The window hides, the first time a notification says the app is still running, and the screenshot still uploads. Clicking the tray icon shows the window. | |
 | 11 | With the app in the tray, start it again from the Start menu. | The existing window shows and takes the focus; no second tray icon appears. | |
 | 12 | Settings → **Start at login** on. Sign out and in. | The app starts with only the tray icon; monitoring is in its last state. | |
-| 13 | Settings → Appearance **Dark**, **Light**, then **System**, and switch Windows between light and dark mode. | The window redraws at once in each; in System it follows Windows within a second; after a restart it keeps the choice. | |
+| 13 | Settings → Appearance **Dark**, **Light**, then **System**, and switch Windows between light and dark mode. | The window redraws at once in each; in System it follows Windows within a second; after a restart it keeps the choice. In each, right-clicking an Activity entry shows an icon by every menu item, in the menu's text color. | |
 | 14 | Start a large upload (a file of a few hundred MB) and choose **Quit** in the tray menu. | The app asks to quit while uploading; after **Quit** and a restart, the entry shows failed "interrupted" with **Retry**. | |
 | 15 | Cancel a large upload from Activity while it is about 30% done. | It stops within a second, shows Cancelled, and no file (not even a `.part`) is left on the server. | |
 | 16 | Move and resize the window, quit from the tray, and start again. | The window opens at the same size and position. | |
