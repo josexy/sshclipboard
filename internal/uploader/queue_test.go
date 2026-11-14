@@ -166,6 +166,15 @@ func TestFIFOAndConcurrencyCap(t *testing.T) {
 	if peak.Load() != 2 {
 		t.Errorf("peak concurrency %d, want 2", peak.Load())
 	}
+	// A job leaves the queue just after its terminal event, which goes out
+	// first so that observers never see more than two transfers at once.
+	deadline := time.Now().Add(5 * time.Second)
+	for e.u.InFlight() != 0 || e.u.Busy(1) {
+		if time.Now().After(deadline) {
+			t.Fatalf("jobs left after finishing: %d in flight", e.u.InFlight())
+		}
+		time.Sleep(time.Millisecond)
+	}
 	mu.Lock()
 	defer mu.Unlock()
 	for i, id := range order {
@@ -173,9 +182,6 @@ func TestFIFOAndConcurrencyCap(t *testing.T) {
 			t.Errorf("start order %v", order)
 			break
 		}
-	}
-	if e.u.InFlight() != 0 || e.u.Busy(1) {
-		t.Error("jobs left after finishing")
 	}
 }
 
