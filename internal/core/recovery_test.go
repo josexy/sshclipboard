@@ -83,9 +83,12 @@ func TestFirstConnectionHiddenWindow(t *testing.T) {
 	if kh, ok, _ := e.st.KnownHosts.Get(ctx, e.srv.Host, e.srv.Port); !ok || kh.Fingerprint != hk.Err.Fingerprint() {
 		t.Error("the key was not saved")
 	}
-	if s := e.waitFor("prompt closed", func(s *State) bool { return s.HostKey == nil }); s.Tray != TrayMonitoring {
-		t.Errorf("tray %s", s.Tray)
-	}
+	// The history row turns uploaded before the Controller publishes the
+	// State without the upload, so the tray can still show uploading when
+	// the prompt has closed. Wait for both.
+	e.waitFor("prompt closed and tray monitoring", func(s *State) bool {
+		return s.HostKey == nil && s.Tray == TrayMonitoring
+	})
 }
 
 // With the window shown, the prompt opens in it; no notification.

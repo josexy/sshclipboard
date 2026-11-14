@@ -76,28 +76,3 @@ jobs:
         env:
           CGO_ENABLED: "1"
         run: go test -race ./...
-
-  build:
-    name: Build Windows bundles
-    needs: [lint, test]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
-
-      - name: Build
-        run: go tool mygo build -platform windows/amd64,windows/arm64
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: sshclipboard-windows-amd64
-          path: build/windows-amd64/
-          retention-days: 14
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: sshclipboard-windows-arm64
-          path: build/windows-arm64/
-          retention-days: 14

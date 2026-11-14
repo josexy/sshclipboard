@@ -21,8 +21,8 @@ go tool mygo build -platform windows/amd64,windows/arm64   # writes build/
 Run the tests, vet, and gofmt before calling a change done. If the SQLite
 native library can't be loaded (for example, when offline), store-backed tests
 skip instead of failing, unless `CI` is set. Run with `-v` if a run looks too
-quick. CI (`.github/workflows/ci.yml`) runs all of these on Linux and Windows
-x64 and Arm, plus `go test -race` on Linux.
+quick. CI (`.github/workflows/ci.yml`) runs the checks above, except the
+build, on Linux and Windows x64 and Arm, plus `go test -race` on Linux.
 
 ## Layout
 
