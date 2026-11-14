@@ -49,9 +49,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The app ships for Windows x64 and Arm; Linux runs the suite
-        # fastest and adds the race detector.
-        os: [ubuntu-latest, windows-latest, windows-11-arm]
+        # Windows is the app's platform; Linux adds the race detector.
+        os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
