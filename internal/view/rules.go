@@ -164,11 +164,11 @@ func (a *App) rulesPage(c *ui.Context, t *ui.Theme, s *core.State) {
 	vm := &a.rules
 	ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
 		Heading(c, locales.RulesTitle(), 24).Grow(1)
-		if ui.Button(c, locales.TestClipboard()).Disabled(vm.running).Clicked() {
+		if button(c, iconFlaskConical, locales.TestClipboard()).Disabled(vm.running).Clicked() {
 			vm.running = true
 			a.ctrl.DryRun(func(r []core.DryRunResult) { vm.dryRun, vm.dryRunDone, vm.running = r, true, false })
 		}
-		if ui.PrimaryButton(c, locales.RulesAdd()).FontWeight(600).Clicked() {
+		if primaryButton(c, iconPlus, locales.RulesAdd()).FontWeight(600).Clicked() {
 			vm.open(store.Rule{Enabled: true, Action: store.ActionUpload})
 		}
 	})
@@ -198,6 +198,8 @@ func (a *App) rulesPage(c *ui.Context, t *ui.Theme, s *core.State) {
 	ui.List(c, &vm.list, len(list), func(i int) {
 		r := list[i]
 		ui.Row(c).Gap(10).Padding(8, 10).AlignItems(ui.Center).Children(func() {
+			// Rows reorder by dragging; the grip shows it.
+			icon(c, iconGripVertical).TextColor(t.TextMuted)
 			on := r.Enabled
 			if ui.Switch(c, &on).Label(locales.RuleEnabled() + ": " + r.Name).Changed() {
 				a.ctrl.SetRuleEnabled(r.ID, on, nil)
@@ -209,16 +211,16 @@ func (a *App) rulesPage(c *ui.Context, t *ui.Theme, s *core.State) {
 				}
 				ui.Text(c, actionLabel(r.Action)+" · "+ruleSummary(r)).TextColor(t.TextMuted).FontSize(12)
 			})
-			if ui.Button(c, "↑").Label(locales.MoveUp() + ": " + r.Name).Tooltip(locales.MoveUp()).Disabled(i == 0).Clicked() {
+			if iconButton(c, iconArrowUp, locales.MoveUp()+": "+r.Name, locales.MoveUp()).Disabled(i == 0).Clicked() {
 				a.ctrl.MoveRule(r.ID, -1, nil)
 			}
-			if ui.Button(c, "↓").Label(locales.MoveDown() + ": " + r.Name).Tooltip(locales.MoveDown()).Disabled(i == len(list)-1).Clicked() {
+			if iconButton(c, iconArrowDown, locales.MoveDown()+": "+r.Name, locales.MoveDown()).Disabled(i == len(list)-1).Clicked() {
 				a.ctrl.MoveRule(r.ID, 1, nil)
 			}
-			if ui.Button(c, locales.Edit()).Label(locales.Edit() + ": " + r.Name).Clicked() {
+			if iconButton(c, iconPencil, locales.Edit()+": "+r.Name, locales.Edit()).Clicked() {
 				vm.open(r)
 			}
-			if ui.Button(c, locales.Delete()).Label(locales.Delete() + ": " + r.Name).Clicked() {
+			if iconButton(c, iconTrash, locales.Delete()+": "+r.Name, locales.Delete()).Clicked() {
 				a.ctrl.DeleteRule(r.ID, nil)
 			}
 		})
@@ -243,7 +245,10 @@ func (a *App) dryRunPanel(c *ui.Context, t *ui.Theme) {
 	vm := &a.rules
 	ui.Column(c).Gap(8).Padding(12).Radius(t.Radius).Background(t.Surface).Role(ui.RoleRegion).
 		Label(locales.DryRunTitle()).Children(func() {
-		ui.Text(c, locales.DryRunTitle()).Bold()
+		ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
+			icon(c, iconFlaskConical).TextColor(t.Accent)
+			ui.Text(c, locales.DryRunTitle()).Bold()
+		})
 		if len(vm.dryRun) == 0 {
 			ui.Text(c, locales.DryRunEmpty()).TextColor(t.TextMuted)
 			return

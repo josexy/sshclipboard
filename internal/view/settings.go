@@ -149,7 +149,7 @@ func (a *App) settingsPage(c *ui.Context, t *ui.Theme, s *core.State) {
 						shown = locales.StagingDefault(a.plat.DefaultStaging)
 					}
 					ui.Text(c, shown).TruncateMiddle().MaxWidth(320)
-					if ui.Button(c, locales.Choose()).Shrink(0).Clicked() && a.plat.PickFolder != nil {
+					if button(c, iconFolderOpen, locales.Choose()).Shrink(0).Clicked() && a.plat.PickFolder != nil {
 						a.plat.PickFolder(func(p string) {
 							if p != "" {
 								set(store.KeyStagingDir, p)

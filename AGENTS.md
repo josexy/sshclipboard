@@ -40,7 +40,9 @@ build, on Linux and Windows x64, plus `go test -race` on Linux.
 - `internal/store`: SQLite storage. `store/storetest` opens throwaway
   databases.
 - `internal/secret`: the OS credential store.
-- `internal/view`: the main window's pages and theme.
+- `internal/view`: the main window's pages and theme, and its Lucide icons:
+  SVGs in `internal/view/icons`, copied unchanged from Lucide and declared
+  in `icons.go`.
 - `locales`: the `en.json` catalog and the generated `catalog_gen.go`.
 
 ## Rules

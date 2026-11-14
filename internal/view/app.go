@@ -136,13 +136,16 @@ func (a *App) View(c *ui.Context) {
 
 	ui.Row(c).Fill().AlignItems(ui.Stretch).Children(func() {
 		ui.Column(c).Width(220).Background(pal.Sidebar).Padding(12, 8).Gap(12).Children(func() {
-			Heading(c, locales.AppName(), 20).PaddingX(8)
+			ui.Row(c).PaddingX(8).Gap(8).AlignItems(ui.Center).Children(func() {
+				ui.Icon(c, iconClipboardCopy).Size(22, 22).TextColor(t.Accent)
+				Heading(c, locales.AppName(), 20)
+			})
 			ui.Sidebar(c, &a.page, func() {
-				ui.SidebarItem(c, PageActivity, nil, locales.NavActivity())
-				ui.SidebarItem(c, PageServers, nil, locales.NavServers())
-				ui.SidebarItem(c, PageRules, nil, locales.NavRules())
-				ui.SidebarItem(c, PageNaming, nil, locales.NavNaming())
-				ui.SidebarItem(c, PageSettings, nil, locales.NavSettings())
+				ui.SidebarItem(c, PageActivity, iconActivity, locales.NavActivity())
+				ui.SidebarItem(c, PageServers, iconServer, locales.NavServers())
+				ui.SidebarItem(c, PageRules, iconListFilter, locales.NavRules())
+				ui.SidebarItem(c, PageNaming, iconFilePen, locales.NavNaming())
+				ui.SidebarItem(c, PageSettings, iconSettings, locales.NavSettings())
 			}).Grow(1).Background(pal.Sidebar).Label(locales.AppName())
 		})
 		ui.Column(c).Grow(1).Children(func() {
@@ -210,7 +213,7 @@ func (a *App) header(c *ui.Context, t *ui.Theme, s *core.State) {
 		if ui.Switch(c, &on).LabelledBy(label).Changed() {
 			a.ctrl.SetMonitoring(on, nil)
 		}
-		if ui.PrimaryButton(c, locales.HeaderUploadNow()).FontWeight(600).Clicked() {
+		if primaryButton(c, iconUpload, locales.HeaderUploadNow()).FontWeight(600).Clicked() {
 			a.ctrl.CaptureNow()
 		}
 	})
@@ -230,6 +233,7 @@ func (a *App) banners(c *ui.Context, t *ui.Theme, s *core.State) {
 	}
 	ui.Row(c).Margin(12, 24, 0, 24).Padding(10, 14).Gap(12).Radius(t.Radius).AlignItems(ui.Center).
 		Background(t.Surface).Border(1, t.Warning).Role(ui.RoleAlert).Children(func() {
+		icon(c, iconTriangleAlert).TextColor(t.Warning).Shrink(0)
 		ui.Text(c, msg).Grow(1).Wrap()
 		if ui.Button(c, locales.Dismiss()).Clicked() {
 			a.ctrl.DismissNotice()
@@ -276,7 +280,10 @@ func (a *App) prompts(c *ui.Context, s *core.State) {
 			case secret.ProxyPassword:
 				title = locales.ProxyPasswordPromptTitle(sp.ProfileName)
 			}
-			Heading(c, title, 18)
+			ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+				ui.Icon(c, iconKeyRound).Size(20, 20).TextColor(c.Theme().Accent)
+				Heading(c, title, 18)
+			})
 			ui.Text(c, locales.SecretPromptMessage()).Wrap().MaxWidth(360)
 			submitted := ui.TextInput(c, &a.secretValue).Password().AutoFocus().Label(title).Width(320).Submitted()
 			ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
