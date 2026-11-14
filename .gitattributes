@@ -1,0 +1,3 @@
+# LF everywhere: the docs tests parse README.md and docs/*.md by line, and
+# gofmt writes LF, so Windows checkouts must not convert to CRLF.
+* text=auto eol=lf
