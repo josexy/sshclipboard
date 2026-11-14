@@ -81,14 +81,12 @@ func (a *App) activityPagination(c *ui.Context, t *ui.Theme, s *core.State) {
 		a.requestHistory(f)
 	}
 	ui.Row(c).Key("pagination").AlignItems(ui.Center).Justify(ui.End).Gap(8).Children(func() {
-		button(c.Key("previous-page"), iconChevronLeft, locales.ActivityPreviousPage()).
+		prev, next := locales.ActivityPreviousPage(), locales.ActivityNextPage()
+		iconButton(c.Key("previous-page"), iconChevronLeft, prev, prev).
 			Disabled(vm.pending || page <= 1).OnClick(func() { changePage(-1) })
 		ui.Text(c, locales.ActivityPageNumber(page, pages)).TextColor(t.TextMuted).Role(ui.RoleStatus)
-		// The arrow of Next follows its label.
-		ui.Button(c.Key("next-page"), "").Children(func() {
-			ui.Text(c, locales.ActivityNextPage()).SingleLine()
-			icon(c, iconChevronRight)
-		}).Disabled(vm.pending || page >= pages).OnClick(func() { changePage(1) })
+		iconButton(c.Key("next-page"), iconChevronRight, next, next).
+			Disabled(vm.pending || page >= pages).OnClick(func() { changePage(1) })
 	})
 }
 
