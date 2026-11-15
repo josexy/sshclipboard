@@ -10,6 +10,17 @@ terminal or hand to a command-line tool on the server that takes a file path.
 Copied files work the same way. Text stays on your computer unless you ask for
 it.
 
+## Screenshots
+
+The main window, in each theme:
+
+| Light | Dark |
+| ----- | ---- |
+| ![The Activity page in the light theme](docs/images/app-light.png) | ![The Activity page in the dark theme](docs/images/app-dark.png) |
+
+**Appearance** in Settings switches between Light, Dark, and System, which
+follows Windows.
+
 ## What it does
 
 - **Watches the clipboard** for screenshots, images, copied files, and text.
