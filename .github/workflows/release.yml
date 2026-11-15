@@ -1,0 +1,136 @@
+name: Release
+
+# Push a tag vX.Y.Z that matches "version" in mygo.json, such as v0.2.0, to
+# build the Windows apps and publish them as the release of that tag. A tag
+# with a pre-release part, such as v0.2.0-beta.1, makes a prerelease.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CGO_ENABLED: "0"
+
+jobs:
+  version:
+    name: Check the version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # mygo build names the files after mygo.json's version, whatever the
+      # tag, so a tag that disagrees builds nothing.
+      - name: Compare the tag with mygo.json
+        id: version
+        run: |
+          version=$(jq -r .version mygo.json)
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::The tag $GITHUB_REF_NAME does not match version $version in mygo.json; expected v$version."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  ci:
+    name: CI
+    needs: version
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    name: Build (Windows)
+    needs: version
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      # MyGo needs no cgo, so Linux builds the Windows apps; NSIS makes
+      # their installers.
+      - name: Install NSIS and zip
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends nsis zip
+
+      - name: Build
+        run: go tool mygo build -platform windows/amd64,windows/arm64
+
+      - name: Package
+        run: |
+          set -euo pipefail
+          mkdir dist
+          for arch in amd64 arm64; do
+            stage="build/windows-$arch"
+
+            # Without NSIS, mygo build only warns and skips the installer.
+            installer=$(find "$stage" -maxdepth 1 -name "*-setup-$VERSION-$arch.exe")
+            if [ -z "$installer" ]; then
+              echo "::error::mygo build made no installer in $stage."
+              exit 1
+            fi
+            mv "$installer" dist/
+
+            # The portable build: the app's folder, as the README describes,
+            # without MyGo's list of the files it wrote.
+            name="sshclipboard-$VERSION-windows-$arch"
+            mkdir "$RUNNER_TEMP/$name"
+            cp -R "$stage/." "$RUNNER_TEMP/$name/"
+            rm -f "$RUNNER_TEMP/$name/.mygo-files"
+            test -f "$RUNNER_TEMP/$name/SSHClipboard.exe"
+            test -f "$RUNNER_TEMP/$name/Sqlitecore.dll"
+            (cd "$RUNNER_TEMP" && zip -qrX "$GITHUB_WORKSPACE/dist/$name.zip" "$name")
+          done
+          cd dist
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows
+          path: dist/
+          if-no-files-found: error
+
+  release:
+    name: Publish the release
+    needs: [version, ci, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: windows
+          path: dist
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          tag="$GITHUB_REF_NAME"
+          repo="$GITHUB_REPOSITORY"
+          prerelease=false
+          case "$VERSION" in *-*) prerelease=true ;; esac
+
+          if gh release view "$tag" --repo "$repo" > /dev/null 2>&1; then
+            # A re-run: replace the files of the release an earlier run made.
+            gh release upload "$tag" dist/* --repo "$repo" --clobber
+            gh release edit "$tag" --repo "$repo" --draft=false --prerelease="$prerelease"
+          else
+            # gh uploads the files to a draft and then publishes it, so the
+            # release never shows without all of them.
+            gh release create "$tag" dist/* --repo "$repo" --verify-tag \
+              --title "SSHClipboard $VERSION" --generate-notes --prerelease="$prerelease"
+          fi

@@ -24,6 +24,13 @@ skip instead of failing, unless `CI` is set. Run with `-v` if a run looks too
 quick. CI (`.github/workflows/ci.yml`) runs the checks above, except the
 build, on Linux and Windows x64, plus `go test -race` on Linux.
 
+To release, bump `version` in `mygo.json`, commit, and push the tag
+`v<version>`. `.github/workflows/release.yml` fails if the tag and
+`mygo.json` disagree. Otherwise it runs CI, builds the installer and a
+portable zip for each Windows architecture, and publishes them with
+`SHA256SUMS` as the tag's GitHub release. A version such as `0.2.0-beta.1`
+is published as a prerelease.
+
 ## Layout
 
 - `main.go`, `desktop.go`: the app's wiring, including the window, tray,
