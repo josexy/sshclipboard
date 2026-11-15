@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -224,7 +225,13 @@ func TestClearHistory(t *testing.T) {
 	slow := t.TempDir() + "/slow.txt"
 	os.WriteFile(slow, []byte("s"), 0o644)
 	e.cb.copy(files(slow))
-	e.waitFor("uploading", func(s *State) bool { return s.Uploading == 1 })
+	// Wait for slow.txt itself: the history settles before the state is
+	// published, so Uploading can still count the first upload.
+	e.waitFor("slow.txt uploading", func(s *State) bool {
+		return slices.ContainsFunc(s.History, func(h store.HistoryEntry) bool {
+			return h.OriginalName == "slow.txt" && h.Status == store.StatusUploading
+		})
+	})
 	if err := call(t, func(d func(error)) { e.c.ClearHistory(d) }); err != nil {
 		t.Fatal(err)
 	}
