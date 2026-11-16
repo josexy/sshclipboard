@@ -35,7 +35,8 @@ follows Windows.
   dropped connections, and never overwrites a file unless you choose to.
 - **Copies the remote path back** to the clipboard, ready to paste.
 - **Keeps a history** you can search, with Retry, Upload anyway, and Copy
-  remote path.
+  remote path. Press **Space** on a text or image entry to preview it, and
+  **Up** and **Down** to browse.
 
 It runs in the tray. **Upload clipboard now** (the button, the tray menu, or
 **Ctrl+Alt+U** from any app) uploads whatever is on the clipboard, even content

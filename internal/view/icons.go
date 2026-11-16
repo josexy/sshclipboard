@@ -49,6 +49,7 @@ var (
 	iconCloudUpload     = lucide("cloud-upload")
 	iconCopy            = lucide("copy")
 	iconExternalLink    = lucide("external-link")
+	iconEye             = lucide("eye")
 	iconFile            = lucide("file")
 	iconFilePen         = lucide("file-pen")
 	iconFlaskConical    = lucide("flask-conical")
@@ -150,14 +151,14 @@ func kindIcon(k store.Kind) *ui.SVG {
 // is drawn to a bitmap when made, so they're made once, at first use.
 var entryMenuIcons = sync.OnceValue(func() entryIcons {
 	return entryIcons{
-		copy: menuIcon(iconCopy), retry: menuIcon(iconRotateCw), upload: menuIcon(iconUpload),
+		preview: menuIcon(iconEye), copy: menuIcon(iconCopy), retry: menuIcon(iconRotateCw), upload: menuIcon(iconUpload),
 		cancel: menuIcon(iconX), open: menuIcon(iconExternalLink), folder: menuIcon(iconFolderOpen),
 		delete: menuIcon(iconTrash),
 	}
 })
 
 type entryIcons struct {
-	copy, retry, upload, cancel, open, folder, delete ui.MenuIcon
+	preview, copy, retry, upload, cancel, open, folder, delete ui.MenuIcon
 }
 
 // menuIcon makes a template menu icon, which menus show in the color of

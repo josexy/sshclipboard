@@ -50,7 +50,7 @@ func TestIconsDeclaredAndDrawn(t *testing.T) {
 
 func TestEntryMenuIcons(t *testing.T) {
 	ic := entryMenuIcons()
-	for i, m := range []ui.MenuIcon{ic.copy, ic.retry, ic.upload, ic.cancel, ic.open, ic.folder, ic.delete} {
+	for i, m := range []ui.MenuIcon{ic.preview, ic.copy, ic.retry, ic.upload, ic.cancel, ic.open, ic.folder, ic.delete} {
 		if m == nil {
 			t.Errorf("menu icon %d was not made", i)
 		}

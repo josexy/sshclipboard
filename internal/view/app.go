@@ -84,6 +84,7 @@ type App struct {
 	naming       namingVM
 	settings     settingsVM
 	thumbs       *thumbCache
+	preview      *previewLoader
 
 	hostKeyOpen bool
 	quitOpen    bool
@@ -96,12 +97,13 @@ type App struct {
 
 // NewApp returns the main window's view over ctrl. redraw runs a function
 // on the UI thread and redraws, as Window.Update does; it brings in
-// thumbnails decoded off the main thread.
+// thumbnails and previews read off the main thread.
 func NewApp(ctrl Controller, plat Platform, redraw func(func())) *App {
 	if plat.Now == nil {
 		plat.Now = time.Now
 	}
-	return &App{ctrl: ctrl, plat: plat, page: PageActivity, thumbs: newThumbCache(redraw)}
+	return &App{ctrl: ctrl, plat: plat, page: PageActivity, thumbs: newThumbCache(redraw),
+		preview: newPreviewLoader(redraw)}
 }
 
 // Page returns the page shown.

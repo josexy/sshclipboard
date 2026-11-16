@@ -118,6 +118,55 @@
   "actionShowInFolder": "Show in folder",
   "actionCancel": "Cancel upload",
   "actionDelete": "Delete",
+  "actionPreview": "Preview",
+  "@actionPreview": {
+    "description": "The Activity entry menu item that opens the preview dialog of a text or image entry."
+  },
+  "previewClose": "Close preview",
+  "@previewClose": {
+    "description": "The preview dialog's Close button, for assistive technology and its tooltip."
+  },
+  "previewHint": "Space or Esc to close · ↑↓ to browse",
+  "@previewHint": {
+    "description": "The preview dialog's footer hint: the keys that close it and move to the previous or next entry."
+  },
+  "previewLoading": "Loading…",
+  "previewNoFiles": "Files have no preview",
+  "@previewNoFiles": {
+    "description": "Shown in the preview dialog for a file entry, copied from Explorer, which the app does not preview."
+  },
+  "previewUnavailable": "This content is no longer available",
+  "@previewUnavailable": {
+    "description": "Shown in the preview dialog when a text or image entry's staged file was removed or never staged."
+  },
+  "previewTruncated": "Showing the first {shown} of {total}",
+  "@previewTruncated": {
+    "description": "Above a long text preview, which shows only its beginning.",
+    "placeholders": {
+      "shown": {
+        "type": "String",
+        "example": "1 MB"
+      },
+      "total": {
+        "type": "String",
+        "example": "5 MB"
+      }
+    }
+  },
+  "previewDimensions": "{w} × {h}",
+  "@previewDimensions": {
+    "description": "An image preview's size in pixels, width by height, as plain digits without grouping.",
+    "placeholders": {
+      "w": {
+        "type": "String",
+        "example": "3840"
+      },
+      "h": {
+        "type": "String",
+        "example": "2160"
+      }
+    }
+  },
   "actionClearHistory": "Clear history…",
   "clearTitle": "Clear history?",
   "clearMessage": "All finished entries and their staged files are removed. Files on servers are not deleted.",

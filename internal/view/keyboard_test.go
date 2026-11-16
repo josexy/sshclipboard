@@ -170,3 +170,31 @@ func TestKeyboardSettings(t *testing.T) {
 	tt.Key(0, ui.KeySpace)
 	f.called(t, "SetSetting(appearance, light)")
 }
+
+// Tab goes round the open preview alone, never to the page behind it:
+// Close, then a text's body.
+func TestKeyboardPreview(t *testing.T) {
+	f := newFake()
+	_, tt, ps := newPreviewTester(t, f)
+	click(t, tt, "text.txt")
+	tt.Key(0, ui.KeySpace)
+	ps.load(t, tt)
+	want := []stop{{ui.RoleButton, "Close preview"}, {ui.RoleTextField, "text.txt"}}
+	if got := rotate(cycle(t, tt, 0, len(want)), want[0]); !slices.Equal(got, want) {
+		t.Errorf("Tab order in the text preview\n got %v\nwant %v", got, want)
+	}
+	rev := []stop{want[1], want[0]}
+	if got := rotate(cycle(t, tt, ui.Shift, len(want)), rev[0]); !slices.Equal(got, rev) {
+		t.Errorf("Shift+Tab order in the text preview\n got %v\nwant %v", got, rev)
+	}
+	// An image's preview has Close alone.
+	tt.Key(0, ui.KeyUp)
+	ps.load(t, tt)
+	wantPreview(t, tt, "image.png")
+	if got := cycle(t, tt, 0, 1); !slices.Equal(got, want[:1]) {
+		t.Errorf("Tab order in the image preview %v, want %v", got, want[:1])
+	}
+	// Closed, Tab reaches the page again.
+	tt.Key(0, ui.KeyEscape)
+	focusByTab(t, tt, "Search names and paths")
+}
