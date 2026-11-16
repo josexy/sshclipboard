@@ -1,7 +1,9 @@
 package view
 
 import (
+	"cmp"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/egoist/mygo/ui"
@@ -24,6 +26,8 @@ type activityVM struct {
 	requestID   uint64
 	pending     bool
 	clearOpen   bool
+	// previewOpen shows the preview of the entry chosen in the table.
+	previewOpen bool
 }
 
 // filter returns the history filter the controls describe.
@@ -90,12 +94,20 @@ func (a *App) activityPagination(c *ui.Context, t *ui.Theme, s *core.State) {
 	})
 }
 
-func (a *App) activityEntryMenu(m *ui.Menu, e store.HistoryEntry) {
+// activityEntryMenu fills the context menu of the entry in row.
+func (a *App) activityEntryMenu(m *ui.Menu, row int, e store.HistoryEntry) {
 	ic := entryMenuIcons()
 	add := func(label string, img ui.MenuIcon, run func()) {
 		if m.Item(label).Icon(img).Chosen() {
 			run()
 		}
+	}
+	if previewable(e) {
+		// The preview follows the table's choice, as Space opens it.
+		add(locales.ActionPreview(), ic.preview, func() {
+			a.activity.list.Choose(row)
+			a.activity.previewOpen = true
+		})
 	}
 	if e.Status == store.StatusUploaded && e.RemotePath != "" {
 		add(locales.ActionCopyPath(), ic.copy, func() { a.ctrl.CopyRemotePath(e.ID, nil) })
@@ -185,7 +197,7 @@ func (a *App) activityPage(c *ui.Context, t *ui.Theme, s *core.State) {
 		}
 		vm.list.Label = func(i int) string { return rows[i].OriginalName }
 		vm.list.CellMenu = func(m *ui.Menu, row, _ int) {
-			a.activityEntryMenu(m, rows[row])
+			a.activityEntryMenu(m, row, rows[row])
 		}
 		cols := []ui.TableColumn{
 			{Title: locales.ColPreview(), Width: 84},
@@ -210,12 +222,144 @@ func (a *App) activityPage(c *ui.Context, t *ui.Theme, s *core.State) {
 				a.activityCell(c, t, s, e, col, fg, now)
 			})
 		}).Grow(1).KeepScrollbars(true).Label(locales.ActivityTitle()).Busy(vm.pending)
+		// Space previews the chosen text or image. The table keeps it for
+		// every row, so that it never pages the table instead.
+		vm.list.OnShortcut(c, 0, ui.KeySpace, func() {
+			if i := vm.selected; !c.ShortcutRepeated() && i >= 0 && i < len(rows) && previewable(rows[i]) {
+				vm.previewOpen = true
+			}
+		})
 		a.activityPagination(c, t, s)
 	}
 
 	switch ui.AlertDialog(c, &vm.clearOpen, locales.ClearTitle(), locales.ClearMessage(), locales.Cancel(), locales.ClearConfirm()) {
 	case 1:
 		a.ctrl.ClearHistory(nil)
+	}
+	a.previewDialog(c, t, rows)
+}
+
+// previewable tells whether an entry has a preview: text and images the
+// app staged, not files.
+func previewable(e store.HistoryEntry) bool {
+	return e.Kind == store.KindText || e.Kind == store.KindImage
+}
+
+// previewDialog shows the preview of the entry chosen in the table while
+// vm.previewOpen. It has no entry of its own: it follows the choice, which
+// Up and Down move, and closes once nothing is chosen, as when the entry
+// is deleted or leaves the page.
+func (a *App) previewDialog(c *ui.Context, t *ui.Theme, rows []store.HistoryEntry) {
+	vm := &a.activity
+	if !vm.previewOpen {
+		return
+	}
+	if vm.selected < 0 || vm.selected >= len(rows) {
+		a.closePreview(c, len(rows) > 0)
+		return
+	}
+	e := rows[vm.selected]
+	pc, ready := previewContent{}, false
+	if previewable(e) {
+		pc, ready = a.preview.get(e)
+	}
+	var title ui.Element
+	panel := ui.Modal(c, &vm.previewOpen, func() {
+		// The dialog keeps Space, Up and Down wherever the focus is in it,
+		// before its button or text takes them.
+		c.OnShortcut(0, ui.KeySpace, func() {
+			if !c.ShortcutRepeated() {
+				a.closePreview(c, true)
+			}
+		})
+		browse := func(delta int) func() {
+			return func() {
+				i := max(0, min(vm.selected+delta, len(rows)-1))
+				vm.list.Choose(i)
+				vm.list.ScrollIntoView(i)
+			}
+		}
+		c.OnShortcut(0, ui.KeyUp, browse(-1))
+		c.OnShortcut(0, ui.KeyDown, browse(1))
+
+		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+			icon(c, kindIcon(e.Kind)).TextColor(t.TextMuted).Shrink(0)
+			title = Heading(c, e.OriginalName, 18).SingleLine().Grow(1)
+			// No tooltip: shown on a button Tab reached, it would take the
+			// Escape that closes the dialog.
+			iconButton(c.Key("preview-close"), iconX, locales.PreviewClose(), "").AutoFocus().Shrink(0).
+				OnClick(func() { a.closePreview(c, true) })
+		})
+		ui.Column(c).Key("preview-body").Grow(1).FillWidth().MinHeight(0).Gap(8).Children(func() {
+			switch {
+			case !previewable(e):
+				previewNote(c, t, iconFile, locales.PreviewNoFiles())
+			case !ready:
+				previewNote(c, t, nil, locales.PreviewLoading())
+			case pc.unavailable:
+				previewNote(c, t, iconTriangleAlert, locales.PreviewUnavailable())
+			case pc.bitmap != nil:
+				iw, ih := ui.ImageSize(pc.bitmap)
+				ui.Column(c).Grow(1).FillWidth().MinHeight(0).Padding(8).Radius(t.Radius).Background(t.Surface).
+					Justify(ui.Center).AlignItems(ui.Center).Children(func() {
+					ui.Image(c.Key(e.ID), pc.bitmap).Fit(ui.Contain).Grow(1).FillWidth().MinHeight(0).
+						MaxWidth(iw).MaxHeight(ih).Label(e.OriginalName)
+				})
+			case pc.text != nil:
+				if pc.truncated {
+					ui.Text(c, locales.PreviewTruncated(HumanSize(previewTextLimit), HumanSize(pc.size))).
+						TextColor(t.TextMuted).Role(ui.RoleStatus)
+				}
+				// Keyed by entry, a text starts at its top with nothing
+				// selected.
+				ui.TextAreaBuffer(c.Key(e.ID), pc.text).ReadOnly(true).Grow(1).FillWidth().MinHeight(0).
+					Label(e.OriginalName)
+			}
+		})
+		ui.Row(c).Gap(16).AlignItems(ui.Center).TextColor(t.TextMuted).Children(func() {
+			w, h := e.Width, e.Height
+			if w <= 0 || h <= 0 {
+				w, h = pc.width, pc.height
+			}
+			if e.Kind == store.KindImage && w > 0 && h > 0 {
+				ui.Text(c, locales.PreviewDimensions(strconv.Itoa(w), strconv.Itoa(h))).SingleLine()
+			}
+			if size := cmp.Or(e.Size, pc.size); size > 0 {
+				ui.Text(c, HumanSize(size)).SingleLine()
+			}
+			ui.Spacer(c)
+			ui.Text(c, locales.PreviewHint()).SingleLine()
+		})
+	})
+	// The panel takes the room the dialog may have, and the body grows
+	// into it.
+	w, h := c.Size()
+	space := t.Space(10)
+	panel.Width(w - space).Height(h - space).LabelledBy(title)
+	if panel.Dismissed() {
+		a.closePreview(c, true)
+	}
+}
+
+// previewNote shows why a preview shows no content, or that it is
+// loading, in the middle of the body.
+func previewNote(c *ui.Context, t *ui.Theme, svg *ui.SVG, msg string) {
+	ui.Column(c).Grow(1).FillWidth().Justify(ui.Center).AlignItems(ui.Center).Gap(12).TextColor(t.TextMuted).
+		Role(ui.RoleStatus).Children(func() {
+		if svg != nil {
+			ui.Icon(c, svg).Size(32, 32)
+		}
+		ui.Text(c, msg).Wrap().TextAlign(ui.Center)
+	})
+}
+
+// closePreview closes the preview, drops its content, and gives the focus
+// back to the table, when there is one, on the entry previewed.
+func (a *App) closePreview(c *ui.Context, focusTable bool) {
+	a.activity.previewOpen = false
+	a.preview.reset()
+	if focusTable {
+		a.activity.list.Handle.Focus(c)
 	}
 }
 

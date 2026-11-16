@@ -731,6 +731,128 @@ func (msgs Messages) ActionDelete() string {
 	return Catalog.Format(msgs.locale, "actionDelete", nil)
 }
 
+// ActionPreview says "Preview"
+// in the language the app shows.
+//
+// The Activity entry menu item that opens the preview dialog of a text or
+// image entry.
+func ActionPreview() string { return In(i18n.Locale()).ActionPreview() }
+
+// ActionPreview says "Preview"
+// in the language of msgs.
+//
+// The Activity entry menu item that opens the preview dialog of a text or
+// image entry.
+func (msgs Messages) ActionPreview() string {
+	return Catalog.Format(msgs.locale, "actionPreview", nil)
+}
+
+// PreviewClose says "Close preview"
+// in the language the app shows.
+//
+// The preview dialog's Close button, for assistive technology and its
+// tooltip.
+func PreviewClose() string { return In(i18n.Locale()).PreviewClose() }
+
+// PreviewClose says "Close preview"
+// in the language of msgs.
+//
+// The preview dialog's Close button, for assistive technology and its
+// tooltip.
+func (msgs Messages) PreviewClose() string {
+	return Catalog.Format(msgs.locale, "previewClose", nil)
+}
+
+// PreviewHint says "Space or Esc to close · ↑↓ to browse"
+// in the language the app shows.
+//
+// The preview dialog's footer hint: the keys that close it and move to the
+// previous or next entry.
+func PreviewHint() string { return In(i18n.Locale()).PreviewHint() }
+
+// PreviewHint says "Space or Esc to close · ↑↓ to browse"
+// in the language of msgs.
+//
+// The preview dialog's footer hint: the keys that close it and move to the
+// previous or next entry.
+func (msgs Messages) PreviewHint() string {
+	return Catalog.Format(msgs.locale, "previewHint", nil)
+}
+
+// PreviewLoading says "Loading…"
+// in the language the app shows.
+func PreviewLoading() string { return In(i18n.Locale()).PreviewLoading() }
+
+// PreviewLoading says "Loading…"
+// in the language of msgs.
+func (msgs Messages) PreviewLoading() string {
+	return Catalog.Format(msgs.locale, "previewLoading", nil)
+}
+
+// PreviewNoFiles says "Files have no preview"
+// in the language the app shows.
+//
+// Shown in the preview dialog for a file entry, copied from Explorer, which
+// the app does not preview.
+func PreviewNoFiles() string { return In(i18n.Locale()).PreviewNoFiles() }
+
+// PreviewNoFiles says "Files have no preview"
+// in the language of msgs.
+//
+// Shown in the preview dialog for a file entry, copied from Explorer, which
+// the app does not preview.
+func (msgs Messages) PreviewNoFiles() string {
+	return Catalog.Format(msgs.locale, "previewNoFiles", nil)
+}
+
+// PreviewUnavailable says "This content is no longer available"
+// in the language the app shows.
+//
+// Shown in the preview dialog when a text or image entry's staged file was
+// removed or never staged.
+func PreviewUnavailable() string { return In(i18n.Locale()).PreviewUnavailable() }
+
+// PreviewUnavailable says "This content is no longer available"
+// in the language of msgs.
+//
+// Shown in the preview dialog when a text or image entry's staged file was
+// removed or never staged.
+func (msgs Messages) PreviewUnavailable() string {
+	return Catalog.Format(msgs.locale, "previewUnavailable", nil)
+}
+
+// PreviewTruncated says "Showing the first {shown} of {total}"
+// in the language the app shows.
+//
+// Above a long text preview, which shows only its beginning.
+func PreviewTruncated(shown string, total string) string {
+	return In(i18n.Locale()).PreviewTruncated(shown, total)
+}
+
+// PreviewTruncated says "Showing the first {shown} of {total}"
+// in the language of msgs.
+//
+// Above a long text preview, which shows only its beginning.
+func (msgs Messages) PreviewTruncated(shown string, total string) string {
+	return Catalog.Format(msgs.locale, "previewTruncated", map[string]any{"shown": shown, "total": total})
+}
+
+// PreviewDimensions says "{w} × {h}"
+// in the language the app shows.
+//
+// An image preview's size in pixels, width by height, as plain digits
+// without grouping.
+func PreviewDimensions(w string, h string) string { return In(i18n.Locale()).PreviewDimensions(w, h) }
+
+// PreviewDimensions says "{w} × {h}"
+// in the language of msgs.
+//
+// An image preview's size in pixels, width by height, as plain digits
+// without grouping.
+func (msgs Messages) PreviewDimensions(w string, h string) string {
+	return Catalog.Format(msgs.locale, "previewDimensions", map[string]any{"w": w, "h": h})
+}
+
 // ActionClearHistory says "Clear history…"
 // in the language the app shows.
 func ActionClearHistory() string { return In(i18n.Locale()).ActionClearHistory() }
